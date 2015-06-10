@@ -11,7 +11,7 @@
 # include "polynomial.hpp"
 
 
-namespace ex = np5_1::examples;
+namespace ex = np5::examples;
 
 namespace {
 
@@ -79,7 +79,7 @@ void ex::evaluate_spline_1(std::ostream& stream) {
 	P poly(1.234, -2.678, 3.456, -0.01);
 	auto points = tabulate(poly, xmin, xmax, dx);
 
-	np5_1::spline_builder sb;
+	np5::spline_builder sb;
 
 	auto s1 = sb(std::begin(points), std::end(points));
 	auto s2 = sb(std::begin(points), std::end(points), 0.);
@@ -104,17 +104,9 @@ void ex::evaluate_poly(std::ostream& stream) {
 	auto data = points;
 
 	std::function<double(double)> erf = [](double) { return random_double(-0.005, 0.005); };
-	np5_1::examples::perturbate(erf, data);
+	np5::examples::perturbate(erf, data);
 
-	//std::valarray<double> p(4);
-	//p[0] = poly.a;
-	//p[1] = poly.b;
-	//p[2] = poly.c;
-	//p[3] = poly.d;
-
-	//for (auto const& pt : points)
-	//	stream << poly(pt.x) << ' ' << np5_1::mcore::eval(p, pt.x) << '\n';
-	auto p = np5_1::approximate_l1(std::begin(data), std::end(data), 2);
+	auto p = np5::approximate_l1(std::begin(data), std::end(data), 2);
 
 	stream << p[0] << ' ' << p[1] << ' ' << p[2] << ' ' << p[3] << '\n';
 }
@@ -122,7 +114,7 @@ void ex::evaluate_poly(std::ostream& stream) {
 
 void ex::evaluate_kernel(std::ostream& stream) {
 	double const dx = 0.02;
-	double const xmin = 0;
+		double const xmin = 0;
 	double const xmax = 1. + 0.5 * dx;
 
 	P poly(-1., 0.345, 2.64, 8.78);
@@ -131,7 +123,7 @@ void ex::evaluate_kernel(std::ostream& stream) {
 	auto data = points;
 
 	std::function<double(double)> erf = [](double) { return random_double(-0.1, 0.1); };
-	np5_1::examples::perturbate(erf, data);
+	np5::examples::perturbate(erf, data);
 
 	double const ddx = 0.357 * dx;
 	double const dxmax = xmax + 0.5 * ddx;
@@ -165,12 +157,12 @@ void ex::run_optimization(std::ostream& stream) {
 	x0[0] = -0.67;
 	x0[1] = 567;
 
-	np5_1::mcore::conf_opt co;
+	np5::mcore::conf_opt co;
 	co.num_iterations = 500;
 	co.initial_step = 1;
 	co.min_step = 1.e-6;
 
-	auto pt = np5_1::mcore::optimize_hj(F, x0, co);
+	auto pt = np5::mcore::optimize_hj(F, x0, co);
 
 	stream << pt[0] << ' ' << pt[1] << std::endl;
 }

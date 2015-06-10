@@ -11,7 +11,7 @@
 # include <iostream>
 
 
-namespace np5_1 {
+namespace np5 {
 
 	static const size_t SPLINE_DEGREE = 3;
 
@@ -19,7 +19,7 @@ namespace np5_1 {
 		double x;
 		double w[SPLINE_DEGREE + 1];
 
-		spline_node(double xx, double a, double b, double c, double d) noexcept 
+		spline_node(double xx, double a, double b, double c, double d) noexcept
 				: x(xx) {
 			w[0] = a;
 			w[1] = b;
@@ -56,8 +56,9 @@ namespace np5_1 {
 		}
 	};
 
+
 	class spline {
-		typedef std::vector<np5_1::spline_node> node_container;
+		typedef std::vector<spline_node> node_container;
 
 	public:
 		spline() noexcept {}
@@ -97,7 +98,7 @@ namespace np5_1 {
 		typedef V value_type;
 
 	public:
-		spl_mem_alloc() noexcept 
+		spl_mem_alloc() noexcept
 			: buffer_size_(0) {}
 
 		void allocate(size_t const num_nodes, value_type*& D0, value_type*& D1, value_type*& D2, value_type*& b) {
@@ -119,7 +120,7 @@ namespace np5_1 {
 
 		spl_mem_alloc(spl_mem_alloc&&);
 		spl_mem_alloc& operator=(spl_mem_alloc&&);
-	
+
 	private:
 		static size_t get_approx_memory(size_t const num_nodes) noexcept {
 			return 4 * num_nodes - 6;
@@ -240,13 +241,13 @@ namespace np5_1 {
 
 		template <typename It>
 		static void init_matrices(
-				It iter, size_t num_nodes, 
-				value_type* const D0, 
-				value_type* const D1, 
-				value_type* const D2, 
+				It iter, size_t num_nodes,
+				value_type* const D0,
+				value_type* const D1,
+				value_type* const D2,
 				value_type* const b,
 				double const Q) {
-			
+
 			value_type x0 = iter->x, y0 = iter->y;
 			++iter;
 			value_type x1 = iter->x, y1 = iter->y;

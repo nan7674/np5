@@ -39,7 +39,7 @@ int main() {
 	//np5_1::examples::evaluate_poly(std::cout);
 
 	std::ofstream ofs("out.txt");
-	np5_1::examples::evaluate_kernel(ofs);
+	np5::examples::evaluate_kernel(ofs);
 	//np5_1::examples::run_optimization(std::cout);
 	return 0;
 }

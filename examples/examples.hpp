@@ -4,7 +4,7 @@
 # include <functional>
 # include <ostream>
 
-namespace np5_1 { namespace examples {
+namespace np5 { namespace examples {
 
 	struct data_point {
 		data_point(double xx, double yy) throw()
