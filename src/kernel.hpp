@@ -5,7 +5,6 @@
  */
 # pragma once
 
-# include <cassert>
 # include <functional>
 
 # include "common.hpp"
@@ -134,6 +133,7 @@ namespace np5 {
 
 		return optimal_bandwidth;
 	}
+
 
 	/** @brief Given a data and a local polynomial parameters computes a value of the regressor.
 	 */
