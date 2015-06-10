@@ -7,7 +7,7 @@ build/:
 	
 clean:
 	rm -rf build/
-	rm -f demo libreg.a src/* examples/*~ *~
+	rm -f demo libreg.a src/*~ examples/*~ *~
 
 libreg.a: build/ build/spline.o build/mcore.o
 	ar rvc libreg.a build/spline.o build/mcore.o
