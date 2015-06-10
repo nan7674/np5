@@ -3,12 +3,9 @@
 # include <algorithm>
 # include <vector>
 # include <memory>
-# include <functional>
 
 # include "common.hpp"
 # include "mcore.hpp"
-
-# include <iostream>
 
 
 namespace np5 {
@@ -199,15 +196,8 @@ namespace np5 {
 
 			init_matrices(iter, num_nodes, D0, D1, D2, b + 1, Q);
 
-			for (size_t i = 0; i < num_nodes - 2; ++i)
-				std::cout << i << " : " << D0[i] << ' ' << D1[i] << ' ' << D2[i] << ' ' << b[i + 1] << '\n';
-
 			mcore::cholesky(D0, D1, D2, num_nodes - 2);
 			mcore::solve_ldl(D0, D1, D2, b + 1, num_nodes - 2);
-
-
-			for (size_t i = 0; i < num_nodes - 2; ++i)
-				std::cout << i << " : " << ' ' << b[i + 1] << '\n';
 
 			return compute_coefficients(iter, num_nodes, b + 1, Q);
 		}
@@ -217,6 +207,8 @@ namespace np5 {
 		template <typename It>
 		spline build_optimal(It b, It e) {}
 
+		/** @brief Computes an interpolational spline.
+		 */
 		template <typename It>
 		spline operator()(It iter, It itere, spline_boundary const& fringe = spline_boundary()) {
 			size_t const num_nodes = get_num_nodes(iter, itere);
@@ -229,7 +221,7 @@ namespace np5 {
 			mcore::cholesky(D0, D1, num_nodes - 2);
 			mcore::solve_ldl(D0, D1, b + 1, num_nodes - 2);
 
-			return compute_coefficients(iter, num_nodes, b + 1);
+			return compute_coefficients(iter, num_nodes, b);
 		}
 
 	private:
@@ -313,41 +305,33 @@ namespace np5 {
 			}
 		}
 
+		/** @brief Computes coefficients of the spline
+		 *
+		 * @param iter0     iterator pointing to the first point in the range
+		 * @param num_nodes total number of points
+		 * @param b         values of an function to interpolate
+		 *
+		 * The routine is being used for construction of an
+		 * interpolation spline.
+		 */
 		template <typename It>
 		static std::vector<spline_node> compute_coefficients(
-				It iter, size_t const num_nodes,
+				It iter0, size_t const num_nodes,
 				double const* const b) {
 
 			std::vector<spline_node> S;
 			S.reserve(num_nodes - 1);
 
-			It p0 = iter++;
-			It p1 = iter++;
+			It iter1 = iter0;
+			++iter1;
 
-			{
-				It p2 = iter++;
-				S.emplace_back(spline_node(p0->x, p1->x, p0->y, p1->y, *(b - 1), b[0]));
-
-				p0 = p1;
-				p1 = p2;
-			}
-
-			for (size_t i = 2; i < num_nodes - 2; ++i, ++iter) {
-				It p2 = iter;
-
-				S.emplace_back(spline_node(p0->x, p1->x, p0->y, p1->y, b[i - 2], b[i - 1]));
-
-				p0 = p1;
-				p1 = p2;
-			}
-
-
-			// Compute the very last coefficients.
-			{
-				S.push_back(spline_node(p0->x, p1->x, p0->y, p1->y, b[num_nodes - 3], b[num_nodes - 2]));
-				It p2 = p1 + 1;
-				S.push_back(spline_node(p1->x, p2->x, p1->y, p2->y, b[num_nodes - 2], b[num_nodes - 1]));
-			}
+			double const* w0 = b;
+			double const* w1 = b + 1;
+			for (size_t i = 0; i < num_nodes - 1; ++i, ++iter0, ++iter1, ++w0, ++w1)
+				S.emplace_back(spline_node(
+					iter0->x, iter1->x,
+					iter0->y, iter1->y,
+					*w0, *w1));
 
 			return std::move(S);
 		}

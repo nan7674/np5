@@ -74,7 +74,7 @@ void ex::perturbate(std::function<double(double)> error, std::vector<data_point>
 void ex::evaluate_spline_1(std::ostream& stream) {
 	double const dx = 0.02;
 	double const xmin = 0;
-	double const xmax = 1. + 0.5 * dx;
+	double const xmax = 5. + 0.5 * dx;
 
 	P poly(1.234, -2.678, 3.456, -0.01);
 	auto points = tabulate(poly, xmin, xmax, dx);
@@ -89,8 +89,6 @@ void ex::evaluate_spline_1(std::ostream& stream) {
 
 	for (double x = xmin; x < dxmax; x += ddx)
 		stream << x << ' ' << poly(x) << ' ' << s1(x) << ' ' << s2(x) << '\n';
-
-	// Check data approximation in the center of the range
 }
 
 
