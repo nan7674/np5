@@ -1,6 +1,3 @@
-// ConsoleApplication1.cpp : Defines the entry point for the console application.
-//
-
 # include <iostream>
 # include <fstream>
 
@@ -37,9 +34,9 @@ double measure_time(std::function<void()> f) {
 
 int main() {
 	//np5::examples::evaluate_spline_1(std::cout);
-	//np5::examples::evaluate_poly(std::cout);
+	np5::examples::evaluate_poly(std::cout);
 
-	np5::examples::run_matrix(std::cout);
+	//np5::examples::run_matrix(std::cout);
 
 	//std::ofstream ofs("out.txt");
 	//np5::examples::evaluate_kernel(std::cout);
