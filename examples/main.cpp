@@ -10,7 +10,7 @@
 # include <memory>
 
 
-# include "spline.hpp"
+# include "src/spline.hpp"
 
 # include <chrono>
 /*! @brief Given the function runs it and measure time of execution
@@ -32,15 +32,18 @@ double measure_time(std::function<void()> f) {
 
 # include "examples.hpp"
 
+# include "src/polynomial.hpp"
+
 
 int main() {
+	//np5::examples::evaluate_spline_1(std::cout);
+	//np5::examples::evaluate_poly(std::cout);
 
-	//np5_1::examples::evaluate_spline_1(std::cout);
-	//np5_1::examples::evaluate_poly(std::cout);
+	np5::examples::run_matrix(std::cout);
 
-	std::ofstream ofs("out.txt");
-	np5::examples::evaluate_kernel(ofs);
-	//np5_1::examples::run_optimization(std::cout);
+	//std::ofstream ofs("out.txt");
+	//np5::examples::evaluate_kernel(std::cout);
+	//np5::examples::run_optimization(std::cout);
 	return 0;
 }
 

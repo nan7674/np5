@@ -3,13 +3,10 @@
 # include "common.hpp"
 
 # include <algorithm>
-# include <cassert>
-# include <functional>
 # include <valarray>
 # include <utility>
 
-// Is it a really useful?
-# include <vector>
+# include <iostream>
 
 namespace np5 { namespace mcore {
 
@@ -77,11 +74,6 @@ namespace np5 { namespace mcore {
 	}
 
 
-	/** @brief Polynom abstraction
-	 */
-	typedef std::valarray<double> poly_type;
-
-
 	/*! @brief Given a polynom and a point computes value of the polynom
 	 *
 	 * @param poly polynom which value is required
@@ -89,24 +81,13 @@ namespace np5 { namespace mcore {
 	 *
 	 * The polynom is supposed to be written in the inverse order.
 	 */
-	inline double eval(poly_type const& poly, double const x) noexcept {
+	inline double eval(std::valarray<double> const& poly, double const x) noexcept {
 		size_t const sz = poly.size() - 1;
 		double r = poly[sz];
 		for (size_t i = sz - 1; i < sz; --i)
 			r = r * x + poly[i];
 		return r;
 	}
-
-	/** @brief Returns random poly
-	 *
-	 * @param deg  degree of the polynom
-	 * @param cmin minimum of a coefficient
-	 * @param cmax maximal value of a coefficient
-	 *
-	 * The function creates random polynom of the degree deg. Coefficients of the polynom
-	 * is uniformly ditributed in the range [cmin, cmax]. By default cmin = -1, cmax = 1
-	 */
-	poly_type get_random_poly(size_t const degree, double const cmin=-1, double const cmax=1);
 
 
 	struct conf_opt {
@@ -180,7 +161,7 @@ namespace np5 { namespace mcore {
 
 			p[i] = v + step;
 			double const fp = f(p);
-			if (fp < min_value) {
+			if (fm < min_value) {
 				min_point = p;
 				min_value = fp;
 				min_found = true;
@@ -199,25 +180,23 @@ namespace np5 { namespace mcore {
 	template <typename F, typename P>
 	P optimize_hj(F func, P p0, conf_opt const& cnf) {
 		double step = cnf.initial_step;
-		double D = cnf.step_delta;
 
 		P p2(p0), p1(p0);
 		for (size_t i = 0; i < cnf.num_iterations; ++i) {
 			double min_reached = 0;
 
 			while (true) {
-				auto sr = neigbour_search(func, p1, step);
+				auto sr = neigbour_search_total(func, p1, step);
 				if (sr.first) {
 					min_reached = sr.second;
 					break;
 				}
-				D += cnf.step_delta;
-				step = cnf.initial_step / D;
+				step /= cnf.step_delta;
 				if (step < cnf.min_step)
 					return p1;
 			}
 
-			std::cout << i << "  : " << step << "  : " << func(p0) << " : ";
+			std::cout << i << "  : ";
 			for (size_t j = 0; j < p0.size(); ++j) {
 				std::cout << p0[j] << ' ';
 			}
@@ -228,13 +207,12 @@ namespace np5 { namespace mcore {
 				for (size_t i = 0; i < p2.size(); ++i)
 					p2[i] = p1[i] + cnf.acc_factor * (p1[i] - p0[i]);
 
-				auto p = neigbour_search(func, p2, step);
+				auto p = neigbour_search_total(func, p2, step);
 				if (p.second < min_reached && p.first) {
 					std::swap(p0, p1);
 					std::swap(p1, p2);
 					min_reached = p.second;
-					D -= cnf.step_delta;
-					step = cnf.initial_step / D;
+					step *= cnf.step_delta;
 				}
 				else {
 					p0 = p1;
@@ -245,91 +223,5 @@ namespace np5 { namespace mcore {
 
 		return std::move(p0);
 	}
-
-
-	// Some functions for linear algebra
-	class vec {
-	public:
-		typedef double value_type;
-
-	private:
-		typedef vec this_type;
-		typedef std::vector<value_type> container_type;
-
-	public:
-
-		vec(size_t dim = 0) : data_(dim) {}
-
-		value_type const& operator[](size_t const index) const noexcept {
-			return data_[index];
-		}
-
-		value_type& operator[](size_t const index) noexcept {
-			return const_cast<value_type&>(const_cast<this_type const*>(this)->operator[](index));
-		}
-
-	private:
-		container_type data_;
-	};
-
-
-	class mat {
-		friend vec solve(mat const&, vec const&);
-
-	public:
-		typedef double value_type;
-
-	private:
-		typedef mat this_type;
-		typedef std::vector<value_type> container_type;
-
-	public:
-		mat() noexcept
-			: rows_(0), cols_(0) {}
-
-		/** @brief Ctor
-		 * 
-		 * @param nrows number of rows in the matrix
-		 * @param ncols number of columns in the matrix
-		 */
-		mat(size_t const nrows, size_t const ncols)
-			: rows_(nrows), cols_(ncols), data_(nrows * ncols) {}
-
-		/** @brief Creates identity matrix
-		 *
-		 * @param dim dimension of the matrix
-		 * @param value value which assigned to diagonal elements
-		 * @return created matrix
-		 *
-		 * The method works only with diagonal matrices.
-		 */
-		static mat idendity(size_t const dim, value_type value=1);
-
-		value_type const& operator()(size_t const row, size_t const col) const noexcept {
-			return data_[col + row * rows_];
-		}
-
-		value_type& operator()(size_t const row, size_t const col) noexcept {
-			return const_cast<value_type&>(const_cast<this_type const*>(this)->operator()(row, col));
-		}
-
-		void operator+=(mat const& other) {
-			// TODO :: add runtime checks here
-			std::transform(std::begin(other.data_), std::end(other.data_), 
-				std::begin(data_), std::begin(data_), std::plus<value_type>());
-		}
-
-	private:
-		size_t const   rows_;
-		size_t const   cols_;
-		container_type data_;
-	};
-
-
-	/** @brief Solves linear system A x= b.
-	 *
-	 * @param A 
-	 */
-	vec solve(mat const& A, vec const& b);
 
 }}

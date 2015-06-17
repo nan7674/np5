@@ -29,6 +29,14 @@ namespace np5 {
 	};
 
 
+	/** @brief Kernel predictor type
+	 */
+	enum class kernel_predictor {
+		NW,
+		LOCAL_POLY
+	};
+
+
 	/*! @brief Analyses data in a container
 	 *
 	 * @param begin starting iterator over the container
@@ -64,52 +72,119 @@ namespace np5 {
 		return std::make_tuple(min_ws, max_ws);
 	}
 
-
-	/*! @brief Computes value of a KR on a data
-	 *
-	 * @param x point at which the value should be computed
-	 * @param h bandwidth
-	 * @param b starting iterator
-	 * @param e end iterator
-	 *
-	 * @return computed value
+	/** @brief Functor to compute kernel prediction
 	 */
-	template <typename It>
-	std::tuple<double, double> estimate_value(
-			It b, It e, double const x, double const bandwidth) noexcept {
-		double v = 0, q = 0;
-		qkernel kernel;
+	template <kernel_predictor>
+	struct kernel_predictor_eval;
 
-		for (; b != e; ++b) {
-			double const lw = kernel((x - b->x) / bandwidth);
-			v += lw * b->y;
-			q += lw;
-		}
+	/** @brief Implementation of NW kernel regressor
+	 */
+	template <>
+	struct kernel_predictor_eval<kernel_predictor::NW> {
+
+		typedef std::tuple<double, double> data_type;
+
+		/** @brief Given an input computes NW parameters
+		 */
+		template <typename It>
+		static data_type evaluate_params(It iter, It iter_end, double const x, double const bandwidth) noexcept {
+			double v = 0, q = 0;
+			qkernel kernel;
+
+			for (; iter != iter_end; ++iter) {
+				double const lw = kernel((x - iter->x) / bandwidth);
+				v += lw * iter->y;
+				q += lw;
+			}
 
 		return std::make_tuple(v, q);
-	}
+		}
+
+		/** @brief Estimate value
+		 */
+		static double estimate_value(data_type const& lp, data_type const& rp) noexcept {
+			return (std::get<0>(lp) + std::get<0>(rp)) / (std::get<1>(lp) + std::get<1>(rp));
+		}
+
+		/** @brief Estimate value
+		 */
+		static double estimate_value(data_type const& pars) noexcept {
+			return std::get<0>(pars) / std::get<1>(pars);
+		}
+	};
+
+
+	/** @brief IMplementation of LP predictor routines
+	 */
+	template <>
+	struct kernel_predictor_eval<kernel_predictor::LOCAL_POLY> {
+
+		typedef std::tuple<double, double, double, double, double> data_type;
+
+		/** @brief Given an input computes NW parameters
+		 */
+		template <typename It>
+		static data_type evaluate_params(It iter, It iter_end, double const x, double const bandwidth) noexcept {
+			double A = 0, B = 0, C = 0, D1 = 0, D2 = 0;
+			qkernel kernel;
+			for (; iter != iter_end; ++iter) {
+				double const dx = x - iter->x;
+				double const w = kernel(dx / bandwidth);
+
+				A += w * dx * dx;
+				B += w * dx;
+				C += w;
+
+				D1 += w * iter->y * dx;
+				D2 += w * iter->y;
+			}
+
+			return std::make_tuple(A, B, C, D1, D2);
+		}
+
+		static double estimate_value(data_type const& lp, data_type const& rp) {
+			double const A  = std::get<0>(lp) + std::get<0>(rp);
+			double const B  = std::get<1>(lp) + std::get<1>(rp);
+			double const C  = std::get<2>(lp) + std::get<2>(rp);
+			double const D1 = std::get<3>(lp) + std::get<3>(rp);
+			double const D2 = std::get<4>(lp) + std::get<4>(rp);
+
+			double const DET = A * C - B * B;
+			return (A * D2 - B * D1) / DET;
+		}
+
+		static double estimate_value(data_type const& pars) {
+			double A, B, C, D1, D2;
+			std::tie(A, B, C, D1, D2) = pars;
+
+			double const DET = A * C - B * B;
+			return (A * D2 - B * D1) / DET;
+		}
+
+	};
 
 
 	/** @brief Computes value of a kernel regression
 	 */
-	template <typename It>
+	template <typename It, kernel_predictor Tp>
 	double predict(It b, It e, double const x, double const bandwidth) noexcept {
-		auto p = estimate_value(b, e, x, bandwidth);
-		return std::get<0>(p) / std::get<1>(p);
+		typedef kernel_predictor_eval<Tp> predictor_type;
+		return predictor_type::estimate_value(predictor_type::evaluate_params(b, e, x, bandwidth));
 	}
 
 
 	/** @brief Given data points computes optimal bandwidth
 	 */
-	template <typename It>
+	template <typename It, kernel_predictor Tp>
 	double compute_bandwidth(It pb, It pe) noexcept {
+		typedef kernel_predictor_eval<Tp> predictor_type;
+
 		auto bounds = get_spreading(pb, pe);
 
 		double bandwidth = std::get<0>(bounds);
 		double const max_bandwidth = std::get<1>(bounds);
 		double const step = bandwidth * 0.5;
 
-		It b = pb; std::advance(b, 1);
 		It e = pe; std::advance(e, -1);
 
 		double optimal_bandwidth = bandwidth;
@@ -117,11 +192,11 @@ namespace np5 {
 
 		for (; bandwidth < max_bandwidth; bandwidth += step) {
 			double error_est = 0;
-			for (It iter = b; iter != e; ++iter) {
-				auto p0 = estimate_value(pb, iter, iter->x, bandwidth);
-				auto p1 = estimate_value(iter + 1, pe, iter->x, bandwidth);
+			for (It iter = pb; iter != e; ++iter) {
+				auto p0 = predictor_type::evaluate_params(pb, iter, iter->x, bandwidth);
+				auto p1 = predictor_type::evaluate_params(iter + 1, pe, iter->x, bandwidth);
 
-				double const V = (std::get<0>(p0) + std::get<0>(p1)) / (std::get<1>(p0) + std::get<1>(p1)) - iter->y;
+				double const V = predictor_type::estimate_value(p0, p1) - iter->y;
 				error_est += V * V;
 			}
 
@@ -132,30 +207,5 @@ namespace np5 {
 		}
 
 		return optimal_bandwidth;
-	}
-
-
-	/** @brief Given a data and a local polynomial parameters computes a value of the regressor.
-	 */
-	template <typename It>
-	double loc_poly_predict(It iter, It const iter_end, double const x, double const bandwidth) noexcept {
-		double A = 0, B = 0, C = 0, D1 = 0, D2 = 0;
-		qkernel kernel;
-		for (; iter != iter_end; ++iter) {
-			double const dx = x - iter->x;
-			double const w = kernel(dx / bandwidth);
-
-			A += w * dx * dx;
-			B += w * dx;
-			C += w;
-
-			D1 += w * iter->y * dx;
-			D2 += w * iter->y;
-		}
-
-		double const DET = A * C - B * B;
-		double const b = (A * D2 - B * D1) / DET;
-
-		return b;
 	}
 }

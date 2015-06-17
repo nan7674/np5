@@ -19,7 +19,7 @@ build/mcore.o: build/ src/mcore.hpp src/mcore.cpp
 	g++ -c $(CCFLAGS) src/mcore.cpp -o build/mcore.o
 
 demo: libreg.a examples/examples.hpp examples/examples.cpp examples/main.cpp
-	g++ $(CCFLAGS)  -L. -Isrc/ examples/examples.cpp examples/main.cpp -lreg  -o demo 
+	g++ $(CCFLAGS)  -L. -I. examples/examples.cpp examples/main.cpp -lreg  -o demo 
 
 
 

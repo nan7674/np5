@@ -29,4 +29,6 @@ namespace np5 { namespace examples {
 	void evaluate_poly(std::ostream& stream);
 
 	void run_optimization(std::ostream& stream);
+
+	void run_matrix(std::ostream&);
 }}

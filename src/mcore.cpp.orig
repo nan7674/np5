@@ -1,30 +1,7 @@
 # include "mcore.hpp"
 
-# include <algorithm>
-# include <random>
-
-# include "common.hpp"
 
 namespace mcore = np5::mcore;
-
-namespace {
-
-	class random_generator {
-	public:
-		random_generator() {}
-
-		double double_uniform(double const vmin, double const vmax) {
-			return std::uniform_real_distribution<>(vmin, vmax)(gen_);
-		}
-
-	private:
-		std::mt19937 gen_;
-	};
-
-	typedef np5::singleton<random_generator> RG;
-
-}
-
 
 /* @brief Cholesky decomposition of a symmetric matrices
  *
@@ -121,35 +98,3 @@ void mcore::solve_ldl(
 	for (size_t i = n - 3; i < std::numeric_limits<size_t>::max(); --i)
 		y[i] -= d1[i] * y[i + 1];
 }
-
-
-mcore::poly_type mcore::get_random_poly(size_t const degree, double const cmin, double const cmax) {
-	poly_type poly(degree + 1);
-	RG& g = RG::instance();
-	for (size_t i = 0; i < degree + 1; ++i)
-		poly[i] = g.double_uniform(cmin, cmax);
-	std::cout << &poly[0] << std::endl;
-	return poly;
-}
-
-
-mcore::mat mcore::mat::idendity(size_t const dim, double const value) {
-	mat retval(dim, dim);
-	for (size_t i = 0; i < dim; ++i)
-		retval(i, i) = value;
-	return retval;
-}
-
-namespace {
-
-}
-
-/** @brief Solves linear system A x= b.
-	*
-	* @param A 
-	*/
-mcore::vec mcore::solve(mat const& A, vec const& b) {
-	// TODO :: remove data copying
-	return vec();
-}
-

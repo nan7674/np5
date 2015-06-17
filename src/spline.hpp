@@ -1,6 +1,7 @@
 # pragma once
 
 # include <algorithm>
+# include <functional>
 # include <vector>
 # include <memory>
 
@@ -358,7 +359,7 @@ namespace np5 {
 
 				double const y = p0->y - Q * r0 * b[0];
 
-				y0 = p1->y - Q * (r1 * b[1] + (r0 + r1) * b[0]);
+				y0 = p1->y - Q * (r1 * b[0] + (r0 + r1) * b[1]);
 				S.emplace_back(spline_node(p0->x, p1->x, y, y0, *(b - 1), b[0]));
 
 				p0 = p1;
