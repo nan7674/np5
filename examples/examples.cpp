@@ -52,7 +52,7 @@ namespace {
 		return std::uniform_real_distribution<>(x, y)(generator::instance()());
 	}
 
-}
+} // anonymous namespace
 
 std::vector<ex::data_point> ex::tabulate(std::function<double(double)> F, double xmin, double const xmax, double const dx) {
 	std::vector<data_point> out;
@@ -142,7 +142,7 @@ void ex::evaluate_poly(std::ostream& stream) {
 
 void ex::evaluate_kernel(std::ostream& stream) {
 	double const dx = 0.02;
-		double const xmin = 0;
+	double const xmin = 0;
 	double const xmax = 1. + 0.5 * dx;
 
 	P poly(-1., 0.345, 2.64, 8.78);

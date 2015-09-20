@@ -1,6 +1,6 @@
 .PHONY: clean
 
-CCFLAGS = -std=c++11 
+CCFLAGS = -std=c++11 -ggdb
 
 build/:
 	mkdir build

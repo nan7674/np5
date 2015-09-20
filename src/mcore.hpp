@@ -103,15 +103,20 @@ namespace np5 { namespace mcore {
 	 * @param cmin minimum of a coefficient
 	 * @param cmax maximal value of a coefficient
 	 *
-	 * The function creates random polynom of the degree deg. Coefficients of the polynom
-	 * is uniformly ditributed in the range [cmin, cmax]. By default cmin = -1, cmax = 1
+	 * The function creates random polynom of the degree deg. Coefficients of
+	 * the polynom is uniformly ditributed in the range [cmin, cmax]. By
+	 * default cmin = -1, cmax = 1
 	 */
-	poly_type get_random_poly(size_t const degree, double const cmin=-1, double const cmax=1);
+	poly_type get_random_poly(
+		size_t const degree,
+		double const cmin=-1,
+		double const cmax=1);
 
 
 	struct conf_opt {
 		conf_opt() noexcept
-			: initial_step(0.01), min_step(1.e-6), acc_factor(2.0), step_delta(2), num_iterations(500) {}
+			: initial_step(0.01), min_step(1.e-6), acc_factor(2.0),
+			  step_delta(2), num_iterations(500) {}
 
 		double initial_step;
 		double min_step;
@@ -136,7 +141,8 @@ namespace np5 { namespace mcore {
 	* step.
 	*/
 	template <typename F, typename P>
-	inline std::pair<bool, double> neigbour_search(F f, P& p, double const step) noexcept {
+	inline std::pair<bool, double> neigbour_search(
+			F f, P& p, double const step) noexcept {
 		double e_0 = f(p);
 
 		for (size_t i = 0; i < p.size(); ++i) {
@@ -163,7 +169,8 @@ namespace np5 { namespace mcore {
 	/** @brief Looks for function minimum near a point
 	 */
 	template <typename F, typename P>
-	inline std::pair<bool, double> neigbour_search_total(F f, P& p, double const step) {
+	inline std::pair<bool, double> neigbour_search_total(
+			F f, P& p, double const step) {
 		bool min_found = false;
 		P      min_point(p);
 		double min_value = f(p);
@@ -265,7 +272,8 @@ namespace np5 { namespace mcore {
 		}
 
 		value_type& operator[](size_t const index) noexcept {
-			return const_cast<value_type&>(const_cast<this_type const*>(this)->operator[](index));
+			return const_cast<value_type&>(
+				const_cast<this_type const*>(this)->operator[](index));
 		}
 
 	private:
@@ -288,7 +296,7 @@ namespace np5 { namespace mcore {
 			: rows_(0), cols_(0) {}
 
 		/** @brief Ctor
-		 * 
+		 *
 		 * @param nrows number of rows in the matrix
 		 * @param ncols number of columns in the matrix
 		 */
@@ -310,12 +318,13 @@ namespace np5 { namespace mcore {
 		}
 
 		value_type& operator()(size_t const row, size_t const col) noexcept {
-			return const_cast<value_type&>(const_cast<this_type const*>(this)->operator()(row, col));
+			return const_cast<value_type&>(
+				const_cast<this_type const*>(this)->operator()(row, col));
 		}
 
 		void operator+=(mat const& other) {
 			// TODO :: add runtime checks here
-			std::transform(std::begin(other.data_), std::end(other.data_), 
+			std::transform(std::begin(other.data_), std::end(other.data_),
 				std::begin(data_), std::begin(data_), std::plus<value_type>());
 		}
 
@@ -328,7 +337,7 @@ namespace np5 { namespace mcore {
 
 	/** @brief Solves linear system A x= b.
 	 *
-	 * @param A 
+	 * @param A
 	 */
 	vec solve(mat const& A, vec const& b);
 
