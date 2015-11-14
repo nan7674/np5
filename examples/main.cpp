@@ -33,7 +33,7 @@ double measure_time(std::function<void()> f) {
 
 
 int main() {
-	np5::examples::evaluate_spline_1(std::cout);
+	//np5::examples::evaluate_spline_1(std::cout);
 	np5::examples::evaluate_poly(std::cout);
 
 	//np5::mcore::mat x;
@@ -43,7 +43,7 @@ int main() {
 	//np5::examples::run_matrix(std::cout);
 
 	//std::ofstream ofs("out.txt");
-	np5::examples::evaluate_kernel(std::cout);
+	//np5::examples::evaluate_kernel(std::cout);
 	//np5::examples::run_optimization(std::cout);
 	return 0;
 }

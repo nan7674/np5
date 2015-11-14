@@ -130,12 +130,11 @@ mcore::poly_type mcore::get_random_poly(
 	RG& g = RG::instance();
 	for (size_t i = 0; i < degree + 1; ++i)
 		poly[i] = g.double_uniform(cmin, cmax);
-	std::cout << &poly[0] << std::endl;
 	return poly;
 }
 
 
-mcore::mat mcore::mat::idendity(size_t const dim, double const value) {
+mcore::mat mcore::mat::identity(size_t const dim, double const value) {
 	mat retval(dim, dim);
 	for (size_t i = 0; i < dim; ++i)
 		retval(i, i) = value;

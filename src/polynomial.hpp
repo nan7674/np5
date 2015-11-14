@@ -10,7 +10,8 @@
 
 # include "mcore.hpp"
 # include "common.hpp"
-
+# include "mcore/optimization.hpp"
+# include "mcore/linalg.hpp"
 
 namespace np5 {
 
@@ -30,6 +31,10 @@ namespace np5 {
 		}
 
 	private:
+		l1_estimation(l1_estimation&) = delete;
+		l1_estimation& operator=(l1_estimation&) = delete;
+
+	private:
 		It const first_;
 		It const last_;
 	};
@@ -39,12 +44,38 @@ namespace np5 {
 	 */
 	template <typename It>
 	mcore::poly_type approximate_l1(It begin, It end, size_t const degree) {
-		mcore::poly_type poly = mcore::get_random_poly(degree);
-		mcore::conf_opt conf;
-		conf.initial_step = 0.1;
-		conf.num_iterations = 500;
-		l1_estimation<It> F(begin, end);
-		return mcore::optimize_hj(F, poly, conf);
+		return opt::optimize_NM(
+			l1_estimation<It>{begin, end},
+			mcore::get_random_poly(degree),
+			opt::configuration_NM{});
+	}
+
+	/** @brief Creates classical L2 data approximation
+	 */
+	template <typename It>
+	mcore::poly_type approximate_l2(It begin, It end, size_t const degree) {
+		size_t const num_samples = std::distance(begin, end);
+
+		::mcore::linalg::mat A(num_samples, degree + 1);
+		::mcore::linalg::vec b(num_samples);
+
+		size_t r = 0;
+		for (; begin != end; ++begin, ++r) {
+			double e = 1;
+			for (size_t j = 0; j < degree + 1; ++j, e *= begin->x)
+				A(r, j) = e;
+			b(r) = begin->y;
+		}
+
+		::mcore::linalg::vec x = ::mcore::linalg::solve(
+			::mcore::linalg::transposed(A) * A,
+			::mcore::linalg::transposed(A) * b);
+
+		mcore::poly_type approximator(0., degree + 1);
+		for (size_t i = 0; i < degree + 1; ++i)
+			approximator[i] = x(i);
+		return approximator;
+
 	}
 
 
@@ -52,7 +83,7 @@ namespace np5 {
 
 	class L1L2 {
 	public:
-		L1L2(double const spreading) noexcept 
+		L1L2(double const spreading) noexcept
 			: spreading_(spreading) {}
 
 
@@ -144,7 +175,7 @@ namespace np5 {
 			return g;
 		}
 
-		/** @brief Computes jacobian 
+		/** @brief Computes jacobian
 		 */
 		jacobian_type jacobian(argument_type const& poly) const {
 			jacobian_type J(poly.size(), poly.size());
@@ -181,7 +212,7 @@ namespace np5 {
 
 	template <typename It, class W>
 	mcore::poly_type approximate(It iter, It iter_end, size_t const degree, W measure) {
-		static_assert(np5::common::has_member_diff<W>::value, 
+		static_assert(np5::common::has_member_diff<W>::value,
 			"Measure has to be differentiable function");
 		static_assert(np5::common::has_member_diff2<W>::value,
 			"Measure entity should have a method to compute second derivative");

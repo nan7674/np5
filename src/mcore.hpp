@@ -8,18 +8,16 @@
 # include <valarray>
 # include <utility>
 
-// Is it a really useful?
-# include <vector>
 
 namespace np5 { namespace mcore {
 
 	/*! @brief Shortcut for pow(x, 2)
-	*/
+	 */
 	inline double sqr(double const x) noexcept {
 		return x * x;
 	}
 
-	/* @brief Cholesky decomposition of a symmetric matrices
+	/** @brief Cholesky decomposition of a symmetric matrices
 	 *
 	 * @param d0 a main diagonal of the matrix
 	 */
@@ -30,7 +28,7 @@ namespace np5 { namespace mcore {
 		size_t const n) noexcept;
 
 
-	/* @brief Cholesky decomposition of a symmetric matrices
+	/** @brief Cholesky decomposition of a symmetric matrices
 	 *
 	 * @param d0 a main diagonal of the matrix
 	 */
@@ -311,7 +309,7 @@ namespace np5 { namespace mcore {
 		 *
 		 * The method works only with diagonal matrices.
 		 */
-		static mat idendity(size_t const dim, value_type value=1);
+		static mat identity(size_t const dim, value_type value=1);
 
 		value_type const& operator()(size_t const row, size_t const col) const noexcept {
 			return data_[col + row * rows_];

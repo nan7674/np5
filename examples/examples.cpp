@@ -15,18 +15,18 @@ namespace ex = np5::examples;
 
 namespace {
 
+
 	struct P {
-		P(double aa, double bb, double cc, double dd) throw()
-			: a(aa), b(bb), c(cc), d(dd) {}
+		P(double aa, double bb, double cc) throw()
+			: a(aa), b(bb), c(cc) {}
 
 		double operator()(double x) const throw() {
-			return a + x * (b + x * (c + d * x));
+			return a + x * (b + x * c);
 		}
 
 		double const a;
 		double const b;
 		double const c;
-		double const d;
 	};
 
 	class generator{
@@ -76,7 +76,7 @@ void ex::evaluate_spline_1(std::ostream& stream) {
 	double const xmin = 0;
 	double const xmax = 5. + 0.5 * dx;
 
-	P poly(1.234, -2.678, 3.456, -0.01);
+	P poly(1.234, -2.678, 3.456);
 	auto points = tabulate(poly, xmin, xmax, dx);
 
 	np5::spline_builder sb;
@@ -93,11 +93,11 @@ void ex::evaluate_spline_1(std::ostream& stream) {
 
 
 void ex::evaluate_poly(std::ostream& stream) {
-	double const dx = 0.02;
+	double const dx = 0.002;
 	double const xmin = 0;
 	double const xmax = 1. + 0.5 * dx;
 
-	P poly(-1., 0.345, 5.64, 0);
+	P poly(-1., 0.345, 0.);
 	auto points = tabulate(poly, xmin, xmax, dx);
 	auto data = points;
 
@@ -105,11 +105,11 @@ void ex::evaluate_poly(std::ostream& stream) {
 	np5::examples::perturbate(erf, data);
 
 	// Run L1 optimization
-	auto p = np5::approximate_l1(std::begin(data), std::end(data), 2);
+	auto p1 = np5::approximate_l1(std::begin(data), std::end(data), 2);
+	auto p2 = np5::approximate_l2(data.begin(), data.end(), 1);
 
-	for (size_t i = 0; i < p.size(); ++i)
-		std::cout << p[i] << ' ';
-	std::cout << std::endl;
+	for (auto const& x: data)
+		std::cout << x.x << ' ' << x.y << ' ' << poly(x.x) << ' ' << mcore::eval(p1, x.x) << ' ' << mcore::eval(p2, x.x) << std::endl;
 
 	//np5::L1L2 fair(0.01);
 	//auto gr = np5::make_grad_eval(data.begin(), data.end(), fair);
@@ -145,7 +145,7 @@ void ex::evaluate_kernel(std::ostream& stream) {
 	double const xmin = 0;
 	double const xmax = 1. + 0.5 * dx;
 
-	P poly(-1., 0.345, 2.64, 8.78);
+	P poly(-1., 0.345, 2.64);
 	std::function<double(double)> F = (double(*)(double))sin;
 	auto points = tabulate(F, xmin, xmax, dx);
 	auto data = points;
@@ -198,7 +198,7 @@ void ex::run_optimization(std::ostream& stream) {
 
 void ex::run_matrix(std::ostream& stream) {
 	np5::mcore::mat A(5, 5);
-	np5::mcore::mat I = np5::mcore::mat::idendity(5, 5);
+	np5::mcore::mat I = np5::mcore::mat::identity(5, 5);
 
 	A += I;
 
