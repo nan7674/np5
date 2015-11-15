@@ -1,6 +1,5 @@
 # pragma once
 
-# include <iostream>
 
 # ifdef _WINDOWS
 # define _ALLOW_KEYWORD_MACROS
@@ -37,7 +36,7 @@ namespace np5 { namespace common {
 	MEMBER_DETECTOR(diff);
 	MEMBER_DETECTOR(diff2);
 
-}} // 
+}} //
 
 
 # undef MEMBER_DETECTOR

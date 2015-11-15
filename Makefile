@@ -1,6 +1,6 @@
 .PHONY: clean
 
-CCFLAGS = -std=c++11 -ggdb
+CCFLAGS = -std=c++11 -O3 -march=native -DNDEBUG
 
 build/:
 	mkdir build
@@ -23,7 +23,7 @@ build/linalg.o: build src/mcore/linalg.hpp src/mcore/linalg.cpp
 
 
 demo: libreg.a examples/examples.hpp examples/examples.cpp examples/main.cpp
-	g++ $(CCFLAGS)  -L. -I. examples/examples.cpp examples/main.cpp -lreg  -o demo
+	g++ $(CCFLAGS) -L. -I. examples/examples.cpp examples/main.cpp -lreg  -o demo
 
 
 

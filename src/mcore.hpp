@@ -17,41 +17,6 @@ namespace np5 { namespace mcore {
 		return x * x;
 	}
 
-	/** @brief Cholesky decomposition of a symmetric matrices
-	 *
-	 * @param d0 a main diagonal of the matrix
-	 */
-	void cholesky(
-		double* const d0,
-		double* const d1,
-		double* const d2,
-		size_t const n) noexcept;
-
-
-	/** @brief Cholesky decomposition of a symmetric matrices
-	 *
-	 * @param d0 a main diagonal of the matrix
-	 */
-	void cholesky(
-		double* const d0,
-		double* const d1,
-		size_t const n) noexcept;
-
-
-	void solve_ldl(
-		double const* const d0,
-		double const* const d1,
-		double const* const d2,
-		double* const y,
-		size_t const n) noexcept;
-
-
-	void solve_ldl(
-		double const* const d0,
-		double const* const d1,
-		double* const y,
-		size_t const n) noexcept;
-
 
 	/*! @brief Given a function f and a point x computes derivative of the f
 	 */
@@ -222,12 +187,6 @@ namespace np5 { namespace mcore {
 					return p1;
 			}
 
-			std::cout << i << "  : " << step << "  : " << func(p0) << " : ";
-			for (size_t j = 0; j < p0.size(); ++j) {
-				std::cout << p0[j] << ' ';
-			}
-			std::cout << std::endl;
-
 			// pattern move step
 			while (true) {
 				for (size_t i = 0; i < p2.size(); ++i)
@@ -250,93 +209,5 @@ namespace np5 { namespace mcore {
 
 		return std::move(p0);
 	}
-
-
-	// Some functions for linear algebra
-	class vec {
-	public:
-		typedef double value_type;
-
-	private:
-		typedef vec this_type;
-		typedef std::vector<value_type> container_type;
-
-	public:
-
-		vec(size_t dim = 0) : data_(dim) {}
-
-		value_type const& operator[](size_t const index) const noexcept {
-			return data_[index];
-		}
-
-		value_type& operator[](size_t const index) noexcept {
-			return const_cast<value_type&>(
-				const_cast<this_type const*>(this)->operator[](index));
-		}
-
-	private:
-		container_type data_;
-	};
-
-
-	class mat {
-		friend vec solve(mat const&, vec const&);
-
-	public:
-		typedef double value_type;
-
-	private:
-		typedef mat this_type;
-		typedef std::vector<value_type> container_type;
-
-	public:
-		mat() noexcept
-			: rows_(0), cols_(0) {}
-
-		/** @brief Ctor
-		 *
-		 * @param nrows number of rows in the matrix
-		 * @param ncols number of columns in the matrix
-		 */
-		mat(size_t const nrows, size_t const ncols)
-			: rows_(nrows), cols_(ncols), data_(nrows * ncols) {}
-
-		/** @brief Creates identity matrix
-		 *
-		 * @param dim dimension of the matrix
-		 * @param value value which assigned to diagonal elements
-		 * @return created matrix
-		 *
-		 * The method works only with diagonal matrices.
-		 */
-		static mat identity(size_t const dim, value_type value=1);
-
-		value_type const& operator()(size_t const row, size_t const col) const noexcept {
-			return data_[col + row * rows_];
-		}
-
-		value_type& operator()(size_t const row, size_t const col) noexcept {
-			return const_cast<value_type&>(
-				const_cast<this_type const*>(this)->operator()(row, col));
-		}
-
-		void operator+=(mat const& other) {
-			// TODO :: add runtime checks here
-			std::transform(std::begin(other.data_), std::end(other.data_),
-				std::begin(data_), std::begin(data_), std::plus<value_type>());
-		}
-
-	private:
-		size_t const   rows_;
-		size_t const   cols_;
-		container_type data_;
-	};
-
-
-	/** @brief Solves linear system A x= b.
-	 *
-	 * @param A
-	 */
-	vec solve(mat const& A, vec const& b);
 
 }}

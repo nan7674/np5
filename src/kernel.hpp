@@ -10,7 +10,6 @@
 # include "common.hpp"
 
 
-
 namespace np5 {
 
 	/** @brief Kernel for approximation

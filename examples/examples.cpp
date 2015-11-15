@@ -101,42 +101,14 @@ void ex::evaluate_poly(std::ostream& stream) {
 	auto points = tabulate(poly, xmin, xmax, dx);
 	auto data = points;
 
-	std::function<double(double)> erf = [](double) { return random_double(-0.1, 0.1); };
+	std::function<double(double)> erf = [](double) { return random_double(-0.05, 0.05); };
 	np5::examples::perturbate(erf, data);
 
-	// Run L1 optimization
-	auto p1 = np5::approximate_l1(std::begin(data), std::end(data), 2);
-	auto p2 = np5::approximate_l2(data.begin(), data.end(), 1);
+	auto p1 = np5::approximate_l1(std::begin(data), std::end(data), 1);
+	//auto p2 = np5::approximate_l2(data.begin(), data.end(), 1);
 
-	for (auto const& x: data)
-		std::cout << x.x << ' ' << x.y << ' ' << poly(x.x) << ' ' << mcore::eval(p1, x.x) << ' ' << mcore::eval(p2, x.x) << std::endl;
-
-	//np5::L1L2 fair(0.01);
-	//auto gr = np5::make_grad_eval(data.begin(), data.end(), fair);
-
-	//auto pt = np5::mcore::get_random_poly(3);
-
-	//auto v = gr.gradient(pt);
-
-	//std::function<double(size_t, double, np5::mcore::poly_type)> F = [&gr](size_t i, double x, np5::mcore::poly_type pt) {
-	//	pt[i] = x;
-	//	return gr.distance(pt);
-	//};
-
-	//for (size_t i = 0; i < pt.size(); ++i)
-	//	std::cout << v[i] << ' ' << np5::mcore::diff([i, &F, &pt](double x) { return F(i, x, pt); }, pt[i]) << ' ' << std::endl;
-
-	//auto J = gr.jacobian(pt);
-	//for (size_t i = 0; i < pt.size(); ++i)
-	//	for (size_t j = 0; j < pt.size(); ++j) {
-	//		std::cout << J(i, j) << std::endl;
-	//	}
-
-
-	//np5::L1L2 m(0.1);
-	//auto p = np5::approximate(std::begin(data), std::end(data), 3, m);
-
-	//stream << p[0] << ' ' << p[1] << ' ' << p[2] << ' ' << p[3] << '\n';
+	for (size_t i = 0; i < 2; ++i)
+		std::cout << p1[i] << ' ' << std::endl;
 }
 
 
@@ -193,18 +165,4 @@ void ex::run_optimization(std::ostream& stream) {
 	auto pt = np5::mcore::optimize_hj(F, x0, co);
 
 	stream << pt[0] << ' ' << pt[1] << std::endl;
-}
-
-
-void ex::run_matrix(std::ostream& stream) {
-	np5::mcore::mat A(5, 5);
-	np5::mcore::mat I = np5::mcore::mat::identity(5, 5);
-
-	A += I;
-
-	for (size_t i = 0; i < 5; ++i) {
-		for (size_t j = 0; j < 5; ++j)
-			stream << A(i, j) << ' ';
-		std::cout << std::endl;
-	}
 }

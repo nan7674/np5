@@ -3,7 +3,6 @@
 # include <cassert>
 # include <memory>
 
-# include <iostream>
 
 namespace mcore { namespace linalg {
 
@@ -127,6 +126,12 @@ namespace mcore { namespace linalg {
 		/** @brief Creates copy of the vector
 		 */
 		vec copy() const;
+
+		/** @brief Clears the vector
+		 *
+		 * The operation sets all the elements in the vector to zero.
+		 */
+		void clear();
 
 		value_type const& operator()(size_t index) const noexcept {
 			assert(index < dim_);
@@ -296,6 +301,44 @@ namespace mcore { namespace linalg {
 
 	// Solve operation
 	vec solve(mat const& x, vec const& y);
+
+
+// =============================================================================
+// Low-level matrix operation
+
+	/** @brief Cholesky decomposition of a symmetric 3-diagonal matrix
+	 */
+	void cholesky(
+		double* const d0,
+		double* const d1,
+		double* const d2,
+		size_t const n) noexcept;
+
+	/** @brief Cholesky decomposition of a symmetric matrices
+	 *
+	 * @param d0 a main diagonal of the matrix
+	 */
+	void cholesky(
+		double* const d0,
+		double* const d1,
+		size_t const n) noexcept;
+
+
+	void solve_ldl(
+		double const* const d0,
+		double const* const d1,
+		double const* const d2,
+		double* const y,
+		size_t const n) noexcept;
+
+
+	void solve_ldl(
+		double const* const d0,
+		double const* const d1,
+		double* const y,
+		size_t const n) noexcept;
+
+
 
 
 }} // namespace linalg // namespace mcore

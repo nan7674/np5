@@ -5,6 +5,14 @@
 # include <cstring>
 # include <limits>
 
+namespace {
+
+	template <typename T>
+	T sqr(T value) noexcept { return value * value; }
+
+} // anonymous namespace
+
+
 mcore::linalg::vec mcore::linalg::vec::copy() const {
 	vec other;
 	other.data_.reset(new double[dim_]);
@@ -13,6 +21,11 @@ mcore::linalg::vec mcore::linalg::vec::copy() const {
 	std::memcpy(other.data_.get(), data_.get(), sizeof(value_type) * dim_);
 
 	return other;
+}
+
+void mcore::linalg::vec::clear() {
+	if (dim_)
+		std:memset(data_.get(), 0, sizeof(double) * dim_);
 }
 
 mcore::linalg::mat mcore::linalg::mat::copy() const {
@@ -105,3 +118,103 @@ mcore::linalg::vec mcore::linalg::solve(mat const& A, vec const& y) {
 
 	return r1;
 }
+
+// =============================================================================
+// Low-level matrix oprations
+
+/* @brief Cholesky decomposition of a symmetric matrices
+ *
+ * @param d0 a main diagonal of the matrix
+ */
+void mcore::linalg::cholesky(
+		double* const __restrict__ d0,
+		double* const __restrict__ d1,
+		double* const __restrict__ d2,
+		size_t const n) noexcept {
+
+	d1[0] /= d0[0];
+	d2[0] /= d0[0];
+
+	d0[1] -= sqr(d1[0]) * d0[0];
+	d1[1] = (d1[1] - d0[0] * d1[0] * d2[0]) / d0[1];
+	d2[1] /= d0[1];
+
+	for (size_t i = 2; i < n - 2; ++i) {
+		d0[i] -= d0[i - 2] * sqr(d2[i - 2]) + d0[i - 1] * sqr(d1[i - 1]);
+		d1[i] = (d1[i] - d0[i - 1] * d1[i - 1] * d2[i - 1]) / d0[i];
+		d2[i] /= d0[i];
+	}
+
+	d0[n - 2] -= d0[n - 4] * sqr(d2[n - 4]) + d0[n - 3] * sqr(d1[n - 3]);
+	d1[n - 2] = (d1[n - 2] - d0[n - 3] * d1[n - 3] * d2[n - 3]) / d0[n - 2];
+
+	d0[n - 1] -= d0[n - 3] * sqr(d2[n - 3]) + d0[n - 2] * sqr(d1[n - 2]);
+}
+
+
+/* @brief Cholesky decomposition of a symmetric matrices
+*
+* @param d0 a main diagonal of the matrix
+*/
+void mcore::linalg::cholesky(
+		double* const __restrict__ d0,
+		double* const __restrict__ d1,
+		size_t const n) noexcept{
+
+	d1[0] /= d0[0];
+
+	d0[1] -= sqr(d1[0]) * d0[0];
+	d1[1] /= d0[1];
+
+	for (size_t i = 2; i < n - 2; ++i) {
+		d0[i] -= d0[i - 1] * sqr(d1[i - 1]);
+		d1[i] /= d0[i];
+	}
+
+	d0[n - 2] -= d0[n - 3] * sqr(d1[n - 3]);
+	d1[n - 2] /= d0[n - 2];
+
+	d0[n - 1] -= d0[n - 2] * sqr(d1[n - 2]);
+}
+
+
+void mcore::linalg::solve_ldl(
+		double const* const __restrict__ d0,
+		double const* const __restrict__ d1,
+		double const* const __restrict__ d2,
+		double* const y,
+		size_t const n) noexcept {
+	y[1] -= d1[0] * y[0];
+
+	for (size_t i = 2; i < n; ++i)
+		y[i] -= d1[i - 1] * y[i - 1] + d2[i - 2] * y[i - 2];
+
+	for (size_t i = 0; i < n; ++i)
+		y[i] /= d0[i];
+
+	y[n - 2] -= d1[n - 2] * y[n - 1];
+
+	for (size_t i = n - 3; i < std::numeric_limits<size_t>::max(); --i)
+		y[i] -= d1[i] * y[i + 1] + d2[i] * y[i + 2];
+}
+
+
+void mcore::linalg::solve_ldl(
+		double const* const __restrict__ d0,
+		double const* const __restrict__ d1,
+		double* const y,
+		size_t const n) noexcept{
+	y[1] -= d1[0] * y[0];
+
+	for (size_t i = 2; i < n; ++i)
+		y[i] -= d1[i - 1] * y[i - 1];
+
+	for (size_t i = 0; i < n; ++i)
+		y[i] /= d0[i];
+
+	y[n - 2] -= d1[n - 2] * y[n - 1];
+
+	for (size_t i = n - 3; i < std::numeric_limits<size_t>::max(); --i)
+		y[i] -= d1[i] * y[i + 1];
+}
+

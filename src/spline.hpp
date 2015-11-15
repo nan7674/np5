@@ -8,6 +8,8 @@
 # include "common.hpp"
 # include "mcore.hpp"
 
+# include "mcore/linalg.hpp"
+
 
 namespace np5 {
 
@@ -197,8 +199,8 @@ namespace np5 {
 
 			init_matrices(iter, num_nodes, D0, D1, D2, b + 1, Q);
 
-			mcore::cholesky(D0, D1, D2, num_nodes - 2);
-			mcore::solve_ldl(D0, D1, D2, b + 1, num_nodes - 2);
+			::mcore::linalg::cholesky(D0, D1, D2, num_nodes - 2);
+			::mcore::linalg::solve_ldl(D0, D1, D2, b + 1, num_nodes - 2);
 
 			return compute_coefficients(iter, num_nodes, b + 1, Q);
 		}
@@ -219,8 +221,8 @@ namespace np5 {
 			init_matrices(iter, num_nodes, D0, D1, b + 1);
 			fringe.fill_fringe(b, num_nodes);
 
-			mcore::cholesky(D0, D1, num_nodes - 2);
-			mcore::solve_ldl(D0, D1, b + 1, num_nodes - 2);
+			::mcore::linalg::cholesky(D0, D1, num_nodes - 2);
+			::mcore::linalg::solve_ldl(D0, D1, b + 1, num_nodes - 2);
 
 			return compute_coefficients(iter, num_nodes, b);
 		}
