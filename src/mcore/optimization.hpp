@@ -5,7 +5,7 @@
 # include <cstring>
 # include <type_traits>
 
-namespace opt {
+namespace mcore { namespace calc {
 
 	struct configuration_NM {
 		double reflection_coeff() noexcept { return 1; }
@@ -15,6 +15,19 @@ namespace opt {
 
 		size_t num_iterations() const noexcept { return 3000; }
 	};
+	
+	/** @brief Copy one vector to another
+	 *
+	 * This operation helps us save few instructions
+	 *
+	 */
+	template <typename P>
+	void copy(P& to, P const& from) {
+		assert(to.size() == from.size());
+		for (size_t i = 0; i < to.size(); ++i)
+			to[i] = from[i];
+	}
+
 
 	template <typename P>
 	class simplex {
@@ -28,7 +41,7 @@ namespace opt {
 			: points2_(nullptr) {}
 
 		template <typename F>
-		simplex(F&& func, P const& pt, double delta) : points2_(nullptr), centroid_(pt) {
+		simplex(F&& func, P const& pt, double delta) : points2_(nullptr), centroid_(pt.size()) {
 			reset(func, pt, delta);
 		}
 		
@@ -55,15 +68,14 @@ namespace opt {
 
 			// Allocate memory for the simplex
 			points2_.reset(new extended_point[dim + 1]);
-			centroid_ = initial;
 
 			// Compute simplex
-			points2_[0].point = initial;
+			points2_[0].point = std::move(initial.copy());
 			points2_[0].value = func(initial);
 
 			for (size_t i = 1; i < dim + 1; ++i) {
 				auto& p = points2_[i];
-				p.point = initial;
+				p.point = std::move(initial.copy());
 				p.point[i - 1] *= (1 + delta);
 				p.value = func(p.point);
 			}
@@ -146,11 +158,11 @@ namespace opt {
 		extended_point* buckling_[3];
 		P centroid_;
 	};
-
+	
 
 	template <typename F, typename P, typename C>
 	typename std::remove_reference<P>::type 
-	optimize_NM(F&& func, P&& initial, C config) {
+	optimize_NM(F&& func, P const& initial, C config) {
 		typedef typename std::remove_reference<P>::type point_type;
 		
 		simplex<point_type> smp(func, initial, 0.05);
@@ -159,10 +171,10 @@ namespace opt {
 		double const beta  = config.expansion_coeff();
 		double const gamma = config.contraction_coeff();
 		double const delta = config.reduction_coeff();
-
-		P xr = initial;
-		P xe = initial;
-		P xc = initial;
+	
+		P xr = initial.copy();
+		P xe = initial.copy();
+		P xc = initial.copy();
 
 		size_t iter = 0;
 		while (iter++ < config.num_iterations()) {
@@ -182,20 +194,21 @@ namespace opt {
 			double const fr = func(xr);
 
 			if ((p0.value <= fr) && (fr <= p1.value)) {
-				p2.point = xr;
+				copy(p2.point, xr);
 				p2.value = fr;
 				continue;
 			}
+
 
 			// Expansion step
 			if (fr < p0.value) {
 				xe = x0 + beta * (xr - x0);
 				double const fe = func(xe);
 				if (fe < fr) {
-					p2.point = xe;
+					copy(p2.point, xe);
 					p2.value = fe;
 				} else {
-					p2.point = xr;
+					copy(p2.point, xr);
 					p2.value = fr;
 				}
 				continue;
@@ -207,7 +220,7 @@ namespace opt {
 				: x0 + gamma * (p2.point - x0);
 			double const fc = func(xc);
 			if (fc < fr) {
-				p2.point = xc;
+				copy(p2.point, xc);
 				p2.value = fc;
 				continue;
 			}
@@ -222,7 +235,7 @@ namespace opt {
 			}
 		}
 
-		return smp.centroid();
+		return smp.centroid().copy();
 	}
 
-} // namespace opt
+}} // namespace calc / mcore

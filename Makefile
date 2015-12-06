@@ -9,14 +9,14 @@ clean:
 	rm -rf build/
 	rm -f demo libreg.a src/*~ examples/*~ *~
 
-libreg.a: build/ build/spline.o build/mcore.o build/linalg.o
-	ar rvc libreg.a build/spline.o build/mcore.o build/linalg.o
+libreg.a: build/ build/spline.o build/calc.o build/linalg.o
+	ar rvc libreg.a build/spline.o build/calc.o build/linalg.o
 
 build/spline.o: build/ src/spline.hpp src/spline.cpp
 	g++ -c $(CCFLAGS) src/spline.cpp -Isrc/ -o build/spline.o
 
-build/mcore.o: build/ src/mcore.hpp src/mcore.cpp
-	g++ -c $(CCFLAGS) src/mcore.cpp -o build/mcore.o
+build/calc.o: build/ src/mcore/calc.hpp src/mcore/calc.cpp
+	g++ -c $(CCFLAGS) src/mcore/calc.cpp -o build/calc.o
 
 build/linalg.o: build src/mcore/linalg.hpp src/mcore/linalg.cpp
 	g++ -c $(CCFLAGS) src/mcore/linalg.cpp -o build/linalg.o

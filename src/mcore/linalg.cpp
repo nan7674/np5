@@ -5,44 +5,22 @@
 # include <cstring>
 # include <limits>
 
+# include "calc.hpp"
+
 namespace {
-
-	template <typename T>
-	T sqr(T value) noexcept { return value * value; }
-
+	
+	using ::mcore::calc::sqr;
+	
 } // anonymous namespace
 
 
-mcore::linalg::vec mcore::linalg::vec::copy() const {
-	vec other;
-	other.data_.reset(new double[dim_]);
-	other.dim_ = dim_;
-
-	std::memcpy(other.data_.get(), data_.get(), sizeof(value_type) * dim_);
-
-	return other;
-}
-
-void mcore::linalg::vec::clear() {
-	if (dim_)
-		std:memset(data_.get(), 0, sizeof(double) * dim_);
-}
-
 mcore::linalg::mat mcore::linalg::mat::copy() const {
-	mat other;
-
-	other.data_.reset(new double[row_ * col_]);
-	other.row_ = row_;
-	other.col_ = col_;
-
-	std::memcpy(other.data_.get(), data_.get(), sizeof(value_type) * row_ * col_);
-
-	return other;
+	return mat(rows_, cols_, data_.copy());
 }
 
 bool mcore::linalg::eq(vec const& x, vec const& y, double tol) noexcept {
-	if (x.rows() == y.rows()) {
-		for (size_t i = 0; i < x.rows(); ++i)
+	if (x.dim() == y.dim()) {
+		for (size_t i = 0; i < x.dim(); ++i)
 			if (std::abs(x(i) - y(i)) > tol)
 				return false;
 		return true;
@@ -68,7 +46,7 @@ bool mcore::linalg::eq(mat const& x, mat const& y, double tol) noexcept {
 // Currently the uses the most stupid Gauss method
 mcore::linalg::vec mcore::linalg::solve(mat const& A, vec const& y) {
 	assert(A.rows() == A.cols());
-	assert(A.rows() == y.rows());
+	assert(A.rows() == y.dim());
 
 	size_t const dim = A.rows();
 
@@ -112,11 +90,11 @@ mcore::linalg::vec mcore::linalg::solve(mat const& A, vec const& y) {
 		r(perm[i]) -= s;
 	}
 
-	vec r1(dim);
+	::mcore::detail::sequence<double> r1(dim);
 	for (size_t i = 0; i < dim; ++i)
-		r1(i) = r(perm[i]);
+		r1[i] = r(perm[i]);
 
-	return r1;
+	return vec(std::move(r1));
 }
 
 // =============================================================================

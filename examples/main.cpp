@@ -34,11 +34,10 @@ double measure_time(std::function<void()> f) {
 
 int main() {
 	//np5::examples::evaluate_spline_1(std::cout);
-	//for (size_t i = 0; i < 200; ++i)
-	//	np5::examples::evaluate_poly(std::cout);
+	np5::examples::evaluate_poly(std::cout);
 
 	//std::ofstream ofs("out.txt");
-	np5::examples::evaluate_kernel(std::cout);
+	//np5::examples::evaluate_kernel(std::cout);
 	//np5::examples::run_optimization(std::cout);
 	return 0;
 }

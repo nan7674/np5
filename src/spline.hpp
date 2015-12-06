@@ -6,10 +6,9 @@
 # include <memory>
 
 # include "common.hpp"
-# include "mcore.hpp"
 
 # include "mcore/linalg.hpp"
-
+# include "mcore/calc.hpp"
 
 namespace np5 {
 
@@ -265,7 +264,7 @@ namespace np5 {
 				double const r3 = -r2 - 3. / h2;
 
 
-				D0[no] = Q * (mcore::sqr(r0) + mcore::sqr(r1) + mcore::sqr(r2)) + 2. * (h0 + h1);
+				D0[no] = Q * (mcore::calc::sqr(r0) + mcore::calc::sqr(r1) + mcore::calc::sqr(r2)) + 2. * (h0 + h1);
 				D1[no] = Q * r2 * (r1 + r3) + h1;
 				D2[no] = 3. * Q * r2 / h2;
 

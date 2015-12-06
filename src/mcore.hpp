@@ -40,42 +40,6 @@ namespace np5 { namespace mcore {
 	}
 
 
-	/** @brief Polynom abstraction
-	 */
-	typedef std::valarray<double> poly_type;
-
-
-	/*! @brief Given a polynom and a point computes value of the polynom
-	 *
-	 * @param poly polynom which value is required
-	 * @param x    a point
-	 *
-	 * The polynom is supposed to be written in the inverse order.
-	 */
-	inline double eval(poly_type const& poly, double const x) noexcept {
-		size_t const sz = poly.size() - 1;
-		double r = poly[sz];
-		for (size_t i = sz - 1; i < sz; --i)
-			r = r * x + poly[i];
-		return r;
-	}
-
-	/** @brief Returns random poly
-	 *
-	 * @param deg  degree of the polynom
-	 * @param cmin minimum of a coefficient
-	 * @param cmax maximal value of a coefficient
-	 *
-	 * The function creates random polynom of the degree deg. Coefficients of
-	 * the polynom is uniformly ditributed in the range [cmin, cmax]. By
-	 * default cmin = -1, cmax = 1
-	 */
-	poly_type get_random_poly(
-		size_t const degree,
-		double const cmin=-1,
-		double const cmax=1);
-
-
 	struct conf_opt {
 		conf_opt() noexcept
 			: initial_step(0.01), min_step(1.e-6), acc_factor(2.0),
