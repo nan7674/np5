@@ -7,6 +7,7 @@
  *
  */
 
+
 # include <cmath>
 # include <vector>
 # include <random>
@@ -17,9 +18,9 @@
 # include "mcore/calc.hpp"
 
 namespace np5 {
-	
+
 	namespace detail {
-		
+
 		/** @brief Creates classical L2 data approximation
 		 *
 		 * @param begin  starting iterator of the data
@@ -30,12 +31,10 @@ namespace np5 {
 		 */
 		template <typename It>
 		mcore::linalg::vec approximate_l2(It begin, It end, size_t const degree) {
-			size_t const num_samples = std::distance(begin, end);
-	
 			size_t const N = 2 * degree + 1;
 			std::vector<double> t(N, 0);
 			mcore::linalg::vec b(degree + 1, 0);
-	
+
 			for (; begin != end; ++begin) {
 				double e = 1;
 				double z = begin->y;
@@ -46,20 +45,14 @@ namespace np5 {
 				}
 				for (size_t j = degree + 1; j < N; ++j, e *= x)
 					t[j] += e;
-	
 			}
-	
+
 			mcore::linalg::mat A(degree + 1, degree + 1);
 			for (size_t i = 0; i < degree + 1; ++i)
 				for (size_t j = 0; j < degree + 1; ++j)
 					A(i, j) = t[i + j];
-	
-			mcore::linalg::vec x = mcore::linalg::solve(A, b);
-	
-			mcore::linalg::vec approximator(degree + 1);
-			for (size_t i = 0; i < degree + 1; ++i)
-				approximator[i] = x(i);
-			return approximator;
+
+			return mcore::linalg::solve(A, b);
 		}
 
 	} // namespace detail
@@ -107,7 +100,7 @@ namespace np5 {
 	private:
 		initial_point initial_;
 	};
-	
+
 	inline mcore::linalg::vec get_random_vector(size_t degree) {
 		std::mt19937 gen;
 		mcore::linalg::vec v(degree);
@@ -115,7 +108,7 @@ namespace np5 {
 			v[i] = std::uniform_real_distribution<>{-1, 1}(gen);
 		return v;
 	}
-	
+
 	/** @brief Creates classical L2 data approximation
 	 *
 	 * @param begin  starting iterator of the data
@@ -149,6 +142,5 @@ namespace np5 {
 	mcore::calc::polynom approximate_RANSAC(It begin, It end, size_t degree) {
 		return mcore::calc::polynom();
 	}
-
 
 }
