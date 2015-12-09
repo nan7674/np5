@@ -33,8 +33,8 @@ public:                                                                 \
 
 namespace np5 { namespace common {
 
-	MEMBER_DETECTOR(diff);
-	MEMBER_DETECTOR(diff2);
+	MEMBER_DETECTOR(diff)
+	MEMBER_DETECTOR(diff2)
 
 }} //
 

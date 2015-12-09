@@ -6,6 +6,7 @@
 # include <cstdarg>
 # include <sstream>
 # include <vector>
+# include <tuple>
 
 # include "polynomial.hpp"
 
@@ -14,20 +15,33 @@ namespace {
 
 	class wrapper_exception {};
 
+	typedef Py_ssize_t (*get_size_function)(PyObject*);
+	typedef PyObject* (*get_item_function)(PyObject*, Py_ssize_t);
+
 	struct point {
 		point() {}
 
-		point(PyObject* object) noexcept
+		point(PyObject* a1, PyObject* a2)
+			: x(PyFloat_AsDouble(a1)), y(PyFloat_AsDouble(a2)) {}
+
+		point(PyObject* const object) noexcept
 			: x(PyFloat_AsDouble(PyTuple_GetItem(object, 0))),
 			  y(PyFloat_AsDouble(PyTuple_GetItem(object, 1))) {}
 
-		point& operator=(PyObject* object) {
+		point& operator=(PyObject* const object) {
 			if (object) {
 				x = PyFloat_AsDouble(PyTuple_GetItem(object, 0));
 				y = PyFloat_AsDouble(PyTuple_GetItem(object, 1));
 			}
 
 			return *this;
+		}
+
+		void assign(PyObject* const a1, PyObject* const a2) {
+			if (a1 && a2) {
+				x = PyFloat_AsDouble(a1);
+				y = PyFloat_AsDouble(a2);
+			}
 		}
 
 		double x{0};
@@ -69,8 +83,66 @@ namespace {
 		point point_;
 	};
 
+	// This type of iterator incorporates idea of a ZIP iterator
+	class pyobject_iterator_2 {
+	public:
+		// Ctor for initial position iterator
+		pyobject_iterator_2(
+				PyObject* first_sequence,
+				get_item_function first_getter,
+				PyObject* second_sequence,
+				get_item_function second_getter) noexcept
+			: s1_{first_sequence}, s2_{second_sequence},
+			  get1_{first_getter}, get2_{second_getter},
+			  cursor_{0}
+		{
+			assert(s1_ != nullptr);
+			assert(s2_ != nullptr);
+			assert(g1_ != nullptr);
+			assert(g2_ != nullptr);
+
+			point_.assign(get1_(s1_, 0), get2_(s2_, 0));
+		}
+
+		// Ctor for end position iterator
+		pyobject_iterator_2(
+				PyObject* first_sequence,
+				PyObject* second_sequence,
+				size_t size) noexcept
+			: s1_{first_sequence}, s2_{second_sequence}, cursor_(size)
+		{
+			assert(s1_ != nullptr);
+			assert(s2_ != nullptr);
+		}
+
+		bool operator!=(pyobject_iterator_2 const& it) const noexcept {
+			assert(s1_ == it.s1_);
+			assert(s2_ == it.s2_);
+			return cursor_ != it.cursor_;
+		}
+
+		pyobject_iterator_2& operator++() noexcept {
+			++cursor_;
+			point_.assign(get1_(s1_, cursor_), get2_(s2_, cursor_));
+			return *this;
+		}
+
+		point const* operator->() const noexcept { return &point_; }
+
+	private:
+		PyObject* s1_;
+		PyObject* s2_;
+
+		get_item_function get1_{nullptr};
+		get_item_function get2_{nullptr};
+
+		size_t cursor_;
+		point point_;
+	};
+
 	template <typename Tp>
-	mcore::linalg::vec build_l2_approximation(PyObject* container, size_t degree) {
+	mcore::linalg::vec
+	build_l2_approximation(PyObject* container, size_t degree) {
 		if (Py_ssize_t size = (Tp::get_size)(container)) {
 			if (size == 1) {
 				// insufficient number of samples;
@@ -102,10 +174,6 @@ namespace {
 		}
 	}
 
-
-	typedef Py_ssize_t (*get_size_function)(PyObject*);
-	typedef PyObject* (*get_item_function)(PyObject*, Py_ssize_t);
-
 	struct tuple_traits {
 		static constexpr get_size_function get_size = PyTuple_Size;
 		static constexpr get_item_function get_item = PyTuple_GetItem;
@@ -131,27 +199,83 @@ namespace {
 			return nullptr;
 	}
 
+	std::tuple<get_item_function, size_t> parse_argument(PyObject* obj) {
+		get_item_function getter = nullptr;
+		size_t size = 0;
+		if (PyTuple_CheckExact(obj)) {
+			size = PyTuple_Size(obj);
+			getter = PyTuple_GetItem;
+		} else if (PyList_CheckExact(obj)) {
+			size = PyList_Size(obj);
+			getter = PyList_GetItem;
+		} else {
+			PyErr_SetString(PyExc_ValueError,
+				"Unsupported type of an argument");
+			throw wrapper_exception();
+		}
+		return std::make_tuple(getter, size);
+	}
+
 } // anonymous namespace
 
 
 static PyObject*
 approximate_l2_bind(PyObject* self, PyObject* args) {
-	PyObject* arguments = nullptr;
+	PyObject* arg1 = nullptr;
+	PyObject* arg2 = nullptr;
 	size_t degree = 0;
 
 	try {
 		mcore::linalg::vec V;
-		if (PyArg_ParseTuple(args, "Ol", &arguments, &degree)) {
-			if (PyTuple_CheckExact(arguments))
-				V = std::move(build_l2_approximation<tuple_traits>(arguments, degree));
-			else if (PyList_CheckExact(arguments))
-				V = std::move(build_l2_approximation<list_traits>(arguments, degree));
+		if (PyArg_ParseTuple(args, "Ol", &arg1, &degree)) {
+			if (PyTuple_CheckExact(arg1))
+				V = std::move(build_l2_approximation<tuple_traits>(arg1, degree));
+			else if (PyList_CheckExact(arg1))
+				V = std::move(build_l2_approximation<list_traits>(arg1, degree));
 			else {
 				// Unknown type of arguments
 				PyErr_SetString(PyExc_ValueError,
 					"Unsupported type of arguments");
 				return nullptr;
 			}
+		} else if (PyArg_ParseTuple(args, "OOl", &arg1, &arg2, &degree)) {
+			assert(arg1 != nullptr);
+			assert(arg2 != nullptr);
+
+			auto par1 = parse_argument(arg1);
+			auto par2 = parse_argument(arg2);
+
+			if (std::get<0>(par1) == std::get<0>(par2)) {
+				size_t const size = std::get<1>(par1);
+				if (size) {
+					if (size > 1) {
+						if (size > degree) {
+							// both sizes are equal, so we can continue
+							pyobject_iterator_2 begin(
+								arg1, std::get<0>(par1),
+								arg2, std::get<0>(par2));
+							pyobject_iterator_2 end(arg1, arg2, size);
+							V = np5::detail::approximate_l2(begin, end, degree);
+						} else {
+							// Wrong combination of the degree and the data
+							PyErr_SetString(PyExc_ValueError,
+								"Wrong combination of the degree and the data");
+							return nullptr;
+						}
+					} else {
+						// Unknown type of arguments
+						PyErr_SetString(PyExc_ValueError,
+							"Number of samples in both sequences are equal to 1");
+						return nullptr;
+					}
+				} else {
+					// Unknown type of arguments
+					PyErr_SetString(PyExc_ValueError,
+						"Number of samples in both sequences are equal to zero");
+					return nullptr;
+				}
+			}
+
 		} else {
 			// Unknown type of arguments
 			PyErr_SetString(PyExc_ValueError,
@@ -169,48 +293,78 @@ approximate_l2_bind(PyObject* self, PyObject* args) {
 
 static PyObject*
 approximate_l1_bind(PyObject* self, PyObject* args) {
-	PyObject* ps = nullptr;
+	PyObject* arg1 = nullptr;
+	PyObject* arg2 = nullptr;
 	size_t degree = 0;
 
-	get_size_function get_size = nullptr;
-	get_item_function get_item = nullptr;
+	//get_size_function get_size = nullptr;
 	try {
-		if (PyArg_ParseTuple(args, "Ol", &ps, &degree)) {
-			if (PyTuple_CheckExact(ps)) {
-				get_size = PyTuple_Size;
-				get_item = PyTuple_GetItem;
-			} else if (PyList_CheckExact(ps)) {
-				get_size = PyList_Size;
-				get_item = PyList_GetItem;
-			} else {
-				// Unknown type of arguments
-				PyErr_SetString(PyExc_ValueError,
-					"Unsupported type of arguments");
-				return nullptr;
-			}
-		}
+		std::vector<point> pts;
+		size_t size = 0;
 
-		size_t size = get_size(ps);
-		if (size) {
-			if (size > 1) {
-				if (size > degree) {
-					std::vector<point> pts;
-					pts.reserve(size);
+		if (PyArg_ParseTuple(args, "Ol", &arg1, &degree)) {
+			//if (PyTuple_CheckExact(arg1)) {
+			//	get_size = PyTuple_Size;
+			//	get_item = PyTuple_GetItem;
+			//} else if (PyList_CheckExact(arg1)) {
+			//	get_size = PyList_Size;
+			//	get_item = PyList_GetItem;
+			//} else {
+			//	// Unknown type of arguments
+			//	PyErr_SetString(PyExc_ValueError,
+			//		"Unsupported type of arguments");
+			//	return nullptr;
+			//}
+			auto par = parse_argument(arg1);
 
-					for (size_t i = 0; i < size; ++i)
-						pts.emplace_back(point{get_item(ps, i)});
-
-					return build_result(np5::detail::approximate_l1(
-						std::begin(pts), std::end(pts), degree));
-
+			size = std::get<1>(par);
+			if (size) {
+				if (size > 1) {
+					if (size > degree) {
+						pts.reserve(size);
+						get_item_function get_item = std::get<0>(par);
+						for (size_t i = 0; i < size; ++i)
+							pts.emplace_back(point{get_item(arg1, i)});
+					} else {
+						PyErr_SetString(PyExc_ValueError,
+							"Wrong combination of samples number and a degree");
+						return nullptr;
+					}
 				} else {
 					PyErr_SetString(PyExc_ValueError,
-						"Wrong combination of samples number and a degree");
+						"Data containes only one sample");
 					return nullptr;
 				}
 			} else {
 				PyErr_SetString(PyExc_ValueError,
-					"Empty data; nothing to approximate");
+					"Data is empty");
+				return nullptr;
+			}
+		} else if (PyArg_ParseTuple(args, "OOl", &arg1, &arg2, &degree)) {
+			auto par1 = parse_argument(arg1);
+			auto par2 = parse_argument(arg2);
+
+			if (std::get<1>(par1) != std::get<1>(par2)) {
+				size_t const size = std::get<1>(par1);
+				if (size) {
+					if (size > 1 && degree < size) {
+						pts.reserve(size);
+						auto get1 = std::get<0>(par1);
+						auto get2 = std::get<0>(par2);
+						for (size_t i = 0; i < size; ++i)
+							pts.emplace_back(point{get1(arg1, i), get2(arg2, i)});
+					} else {
+						PyErr_SetString(PyExc_ValueError,
+							"Wrong combination of the degree and the data.");
+						return nullptr;
+					}
+				} else {
+					PyErr_SetString(PyExc_ValueError,
+						"Empty data; nothing to approximate");
+				}
+			} else {
+				PyErr_SetString(PyExc_ValueError,
+					"Sequences are not aligned");
 				return nullptr;
 			}
 		} else {
@@ -218,6 +372,9 @@ approximate_l1_bind(PyObject* self, PyObject* args) {
 				"Empty data; nothing to approximate");
 			return nullptr;
 		}
+
+		return build_result(np5::detail::approximate_l1(
+			std::begin(pts), std::end(pts), degree));
 	}
 
 	catch (...) {

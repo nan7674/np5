@@ -1,6 +1,6 @@
 .PHONY: clean
 
-CCFLAGS = -std=c++11 -O3 -march=native -DNDEBUG
+CCFLAGS = -std=c++11 -Ofast -march=native -DNDEBUG -Wall -pedantic
 
 build/:
 	mkdir build
