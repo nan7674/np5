@@ -7,8 +7,6 @@
  
 # include <boost/test/unit_test.hpp>
 
-# include <iostream>
-
 # include "mcore/sequence.hpp"
 # include "mcore/calc.hpp"
 # include "mcore/linalg.hpp"

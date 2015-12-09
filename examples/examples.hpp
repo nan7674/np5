@@ -2,7 +2,7 @@
 
 # include <vector>
 # include <functional>
-# include <ostream>
+# include <cstdio>
 
 namespace np5 { namespace examples {
 
@@ -22,13 +22,13 @@ namespace np5 { namespace examples {
 	 */
 	void perturbate(std::function<double(double)> error, std::vector<data_point>& v);
 
-	void evaluate_spline_1(std::ostream& stream);
+//	void evaluate_spline_1(std::ostream& stream);
 
-	void evaluate_kernel(std::ostream& stream);
+//	void evaluate_kernel(std::ostream& stream);
 
-	void evaluate_poly(std::ostream& stream);
+	void evaluate_poly(FILE*);
 
-	void run_optimization(std::ostream& stream);
+//	void run_optimization(std::ostream& stream);
 
-	void run_matrix(std::ostream&);
+//	void run_matrix(std::ostream&);
 }}

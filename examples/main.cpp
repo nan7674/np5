@@ -1,15 +1,16 @@
-# include <iostream>
 # include <fstream>
-
 # include <functional>
-
 # include <vector>
 # include <memory>
+# include <chrono>
+# include <cstdio>
 
-
+# include "src/polynomial.hpp"
 # include "src/spline.hpp"
 
-# include <chrono>
+# include "examples.hpp"
+
+
 /*! @brief Given the function runs it and measure time of execution
 *
 * @param[in] f function to run
@@ -23,18 +24,9 @@ double measure_time(std::function<void()> f) {
 }
 
 
-
-# include <iostream>
-# include <fstream>
-
-# include "examples.hpp"
-
-# include "src/polynomial.hpp"
-
-
 int main() {
 	//np5::examples::evaluate_spline_1(std::cout);
-	np5::examples::evaluate_poly(std::cout);
+	np5::examples::evaluate_poly(stdout);
 
 	//std::ofstream ofs("out.txt");
 	//np5::examples::evaluate_kernel(std::cout);
