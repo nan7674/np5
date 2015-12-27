@@ -43,16 +43,30 @@ namespace np5 { namespace common {
 
 namespace np5 {
 
-	template <typename K>
-	class singleton : public K {
-	public:
-		static singleton& instance() {
-			static singleton S;
-			return S;
-		}
+template <typename K>
+class singleton : public K {
+public:
+	static singleton& instance() {
+		static singleton S;
+		return S;
+	}
 
-	private:
-		singleton() : K() {}
-	};
+private:
+	singleton() : K() {}
+
+	singleton& operator=(singleton&) = delete;
+};
+
+
+struct point {
+	point() noexcept {}
+
+	point(double xx, double yy) noexcept
+		: x(xx), y(yy) {}
+
+	double x{0};
+	double y{0};
+};
+
 
 } // namespace np5

@@ -11,6 +11,32 @@
 
 namespace mcore { namespace detail {
 
+template <typename T>
+class data_view {
+protected:
+	data_view(T* initial, size_t count) noexcept
+		: data_(initial), size_(count) {}
+
+public:
+	size_t size() const noexcept { return size_; }
+
+	T& operator[](size_t index) noexcept {
+		assert(index < size_);
+		return data_[index];
+	}
+
+	T const& operator[](size_t index) const noexcept {
+		return const_cast<T const&>(const_cast<data_view*>(this)->operator[](index));
+	}
+
+	T const* begin() const noexcept { return data_; }
+	T const* end() const noexcept { return data_ + size_; }
+
+private:
+	T* data_;
+	size_t size_;
+};
+
 template <typename T, typename X>
 struct expression {
 	typedef T value_type;
@@ -313,6 +339,16 @@ public:
 		return this_copy;
 	}
 
+	/** @brief Explicit copy-constructor
+	 */
+	void assign(sequence const& other) {
+		if (size_ != other.size_) {
+			data_.reset(new T[other.size_]);
+			size_ = other.size_;
+		}
+		std::memcpy(data_.get(), other.data_.get(), sizeof(T) * size_);
+	}
+
 	/** @brief Creates sequence from an expression
 	 */
 	template <typename X>
@@ -348,6 +384,11 @@ public:
 		assert(idx < size_);
 		return data_[idx];
 	}
+
+	/** @brief Returns pointer to data
+	 */
+	T const* data() const noexcept { return data_.get(); }
+	T* data() noexcept { return data_.get(); }
 
 	/** @brief Resize the sequence
 	 *

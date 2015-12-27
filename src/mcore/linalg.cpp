@@ -8,15 +8,39 @@
 # include "calc.hpp"
 
 namespace {
-	
+
 	using ::mcore::calc::sqr;
-	
+
+	class allocator {
+	public:
+		static allocator& instance() noexcept {
+			static allocator obj;
+			return obj;
+		}
+
+		void* allocate(size_t nbytes) {
+			if (nbytes > nbytes_) {
+				buffer_.reset(new unsigned char[nbytes]);
+				nbytes_ = nbytes;
+			}
+			return buffer_.get();
+		}
+
+		void release(void* ptr) {
+		}
+
+	private:
+		size_t nbytes_{0};
+		std::unique_ptr<unsigned char[]> buffer_;
+	};
+
 } // anonymous namespace
 
 
 mcore::linalg::mat mcore::linalg::mat::copy() const {
 	return mat(rows_, cols_, data_.copy());
 }
+
 
 bool mcore::linalg::eq(vec const& x, vec const& y, double tol) noexcept {
 	if (x.dim() == y.dim()) {
@@ -41,7 +65,7 @@ bool mcore::linalg::eq(mat const& x, mat const& y, double tol) noexcept {
 
 
 
-
+/*
 // Solve Ax = b
 // Currently the uses the most stupid Gauss method
 mcore::linalg::vec mcore::linalg::solve(mat const& A, vec const& y) {
@@ -51,7 +75,9 @@ mcore::linalg::vec mcore::linalg::solve(mat const& A, vec const& y) {
 	size_t const dim = A.rows();
 
 	// Create permutation
-	std::unique_ptr<double[]> perm{new double[dim]};
+	double* perm = static_cast<double*>(
+		allocator::instance().allocate(sizeof(double) * dim));
+	//std::unique_ptr<double[]> perm{new double[dim]};
 	for (size_t i = 0; i < dim; ++i)
 		perm[i] = i;
 
@@ -96,6 +122,85 @@ mcore::linalg::vec mcore::linalg::solve(mat const& A, vec const& y) {
 
 	return vec(std::move(r1));
 }
+*/
+
+
+inline size_t mcore::linalg::leq_solver::get_memory_size(size_t dim) noexcept {
+	return sizeof(double) * (dim * dim + dim) + sizeof(size_t) * dim;
+}
+
+mcore::linalg::leq_solver::leq_solver(size_t dim)
+	: dim_(dim),
+	  A_(dim), rhs_(dim),
+	  permutation_(dim),
+	  data_(new uint8_t[get_memory_size(dim)])
+{
+	A_.data_ = reinterpret_cast<double*>(data_.get());
+	rhs_.data_ = A_.data_ + dim_ * dim_;
+	permutation_.data_ = reinterpret_cast<size_t*>(rhs_.data_ + dim_);
+}
+
+inline void mcore::linalg::leq_solver::init_permutation() noexcept {
+	for (size_t i = 0; i < dim_; ++i)
+		permutation_[i] = i;
+}
+
+void
+mcore::linalg::leq_solver::triangulate(mat const& A, vec const& rhs) noexcept {
+	A_.copy_from(A.data().data());
+	rhs_.copy_from(rhs.data().data());
+	init_permutation();
+
+	for (size_t i = 0; i < dim_; ++i) {
+		size_t max_index = i;
+		double max_value = std::abs(A_(permutation_[i], i));
+		for (size_t j = i + 1; j < dim_; ++j) {
+			if (std::abs(A_(permutation_[j], i)) > max_value) {
+				max_value = std::abs(A_(permutation_[j], i));
+				max_index = j;
+			}
+		}
+		std::swap(permutation_[i], permutation_[max_index]);
+		max_value = A_(permutation_[i], i);
+
+		for (size_t j = i; j < dim_; ++j)
+			A_(permutation_[i], j) /= max_value;
+		rhs_(permutation_[i]) /= max_value;
+
+		for (size_t j = i + 1; j < dim_; ++j) {
+			double const K = A_(permutation_[j], i);
+			for (size_t k = i; k < dim_; ++k)
+				A_(permutation_[j], k) -= K * A_(permutation_[i], k);
+			rhs_(permutation_[j]) -= K * rhs_(permutation_[i]);
+		}
+	}
+
+	for (size_t i = dim_ - 2; i < dim_; --i) {
+		double s = 0;
+		for (size_t j = i + 1; j < dim_; ++j)
+			s += A_(permutation_[i], j) * rhs_(permutation_[j]);
+		rhs_(permutation_[i]) -= s;
+	}
+}
+
+
+mcore::linalg::vec
+mcore::linalg::leq_solver::solve(mat const& A, vec const& rhs) {
+	triangulate(A, rhs);
+	mcore::linalg::vec ret(dim_);
+	for (size_t i = 0; i < dim_; ++i)
+		ret[i] = rhs_(permutation_[i]);
+	return ret;
+}
+
+void mcore::linalg::leq_solver::solve(mat const& A, vec const& rhs, vec& sol) {
+	assert(rhs.dim() == sol.dim());
+	assert(rhs.dim() == dim_);
+	triangulate(A, rhs);
+	for (size_t i = 0; i < dim_; ++i)
+		sol[i] = rhs_(permutation_[i]);
+}
+
 
 // =============================================================================
 // Low-level matrix oprations

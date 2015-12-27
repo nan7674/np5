@@ -5,13 +5,19 @@ DEPS = \
     ../src/mcore/linalg.hpp \
     ../src/mcore/calc.hpp \
     ../src/mcore/optimization.hpp \
-    ../src/polynomial.hpp
+    ../src/polynomial.hpp \
+    ../utils/data.hpp
 
-SRC = ../src/mcore/calc.cpp ../src/mcore/linalg.cpp
-INC = -I../src/
+SRC = \
+    ../src/mcore/calc.cpp \
+    ../src/mcore/linalg.cpp \
+    ../src/polynomial.cpp \
+    ../utils/data.cpp
+
+INC = -I../src/ -I../
 LIB = -L/usr/lib64
 CC = g++
-CC_OPTS = -std=c++11 -Ofast -march=native
+CC_OPTS = -std=c++11 -Ofast -march=native -DNDEBUG
 #CC = clang++
 #CC_OPTS = -std=c++11 --analyze
 #CC_OPTS = -std=c++11 -fsanitize=memory -fsanitize-memory-track-origins=2 -g

@@ -2,6 +2,8 @@
 
 # include <cassert>
 # include <memory>
+# include <cstring>
+# include <cstddef>
 # include <initializer_list>
 
 # include "sequence.hpp"
@@ -11,6 +13,7 @@ namespace mcore { namespace linalg {
 
 	class mat;
 	class vec;
+	class leq_solver;
 
 	class vec {
 		vec(vec&) = delete;
@@ -74,9 +77,21 @@ namespace mcore { namespace linalg {
 		 */
 		vec copy() const { return data_.copy(); }
 
+		/** @brief Create a copy of a vector from another
+		 */
+		void assign(vec const& another) { data_.assign(another.data_); }
+
 		/** @brief Change size of an object
 		 */
 		void resize(size_t new_size) { data_.resize(new_size); }
+
+		/** @brief Clears the vector
+		 *
+		 * The operation sets all the element in the vector equals to zero
+		 */
+		void to_zero() noexcept {
+			std::memset(data_.data(), 0, sizeof(double) * data_.size());
+		}
 
 		/** @brief Returns elements of the vector
 		 *
@@ -215,6 +230,8 @@ namespace mcore { namespace linalg {
 		size_t rows() const noexcept { return rows_; }
 		size_t cols() const noexcept { return cols_; }
 
+		container_type const& data() const noexcept { return data_; }
+
 	private:
 		mat(size_t rows, size_t cols, container_type&& data) noexcept
 			: data_(std::move(data)), rows_(rows), cols_(cols) {}
@@ -245,10 +262,117 @@ namespace mcore { namespace linalg {
 	 */
 	bool eq(mat const& x, mat const& y, double tol=1.e-12) noexcept;
 
-	/** @brief Solves system of linear equations
-	 */
-	vec solve(mat const& x, vec const& y);
+	namespace detail {
 
+		class mat_view {
+		public:
+			typedef double element_type;
+			friend class mcore::linalg::leq_solver;
+
+		public:
+			explicit mat_view(size_t nrows) noexcept
+				: nrows_(nrows) {}
+
+			element_type& operator()(size_t r, size_t c) noexcept {
+				assert(r < nrows_);
+				assert(c < nrows_);
+				assert(data_);
+
+				return data_[c + r * nrows_];
+			}
+
+			element_type const& operator()(size_t r, size_t c) const noexcept {
+				return const_cast<element_type const&>(
+					const_cast<mat_view*>(this)->operator()(r, c));
+			}
+
+		private:
+			void copy_from(double const* ptr) noexcept {
+				assert(data_);
+				std::memcpy(data_, ptr, sizeof(double) * nrows_ * nrows_);
+			}
+
+		private:
+			size_t nrows_;
+			element_type* data_{nullptr};
+		};
+
+		template <typename T>
+		class vec_view {
+		public:
+			typedef T element_type;
+			friend class mcore::linalg::leq_solver;
+
+		public:
+			explicit vec_view(size_t dim) noexcept
+				: dimension_(dim) {}
+
+			element_type& operator()(size_t index) noexcept {
+				assert(index < dimension_);
+				return data_[index];
+			}
+
+			element_type const& operator()(size_t index) const noexcept {
+				return const_cast<element_type const&>(
+					const_cast<vec_view*>(this)->operator()(index));
+			}
+
+			element_type& operator[](size_t index) noexcept {
+				assert(index < dimension_);
+				return data_[index];
+			}
+
+			element_type const& operator[](size_t index) const noexcept {
+				return const_cast<element_type const&>(
+					const_cast<vec_view*>(this)->operator[](index));
+			}
+
+		private:
+			void copy_from(double const* ptr) noexcept {
+				assert(data_);
+				std::memcpy(data_, ptr, sizeof(double) * dimension_);
+			}
+
+		private:
+			size_t dimension_;
+			element_type* data_{nullptr};
+		};
+
+	} // namespace detail
+
+	/** @brief The class solve system of linear equations
+	 */
+	class leq_solver {
+		typedef double element_type;
+
+		leq_solver(leq_solver&) = delete;
+		leq_solver& operator=(leq_solver&) = delete;
+
+		static size_t get_memory_size(size_t degree) noexcept;
+
+	public:
+		explicit leq_solver(size_t degree);
+
+		vec solve(mat const& x, vec const& y);
+		void solve(mat const& x, vec const& y, vec& rhs);
+
+	private:
+		void init_permutation() noexcept;
+		void triangulate(mat const& x, vec const& y) noexcept;
+
+	private:
+		size_t dim_;
+		detail::mat_view A_;
+		detail::vec_view<double> rhs_;
+		detail::vec_view<size_t> permutation_;
+		std::unique_ptr<uint8_t[]> data_;
+	};
+
+	/** @brief Solves a system of linear equations
+	 */
+	inline vec solve(mat const& x, vec const& y) {
+		return leq_solver(y.dim()).solve(x, y);
+	}
 
 // =============================================================================
 // Low-level matrix operation
