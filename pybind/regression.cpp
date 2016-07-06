@@ -13,208 +13,208 @@
 
 namespace {
 
-	class wrapper_exception {};
+class wrapper_exception {};
 
-	typedef Py_ssize_t (*get_size_function)(PyObject*);
-	typedef PyObject* (*get_item_function)(PyObject*, Py_ssize_t);
+typedef Py_ssize_t (*get_size_function)(PyObject*);
+typedef PyObject* (*get_item_function)(PyObject*, Py_ssize_t);
 
-	struct point {
-		point() {}
+struct point {
+	point() {}
 
-		point(PyObject* a1, PyObject* a2)
-			: x(PyFloat_AsDouble(a1)), y(PyFloat_AsDouble(a2)) {}
+	point(PyObject* a1, PyObject* a2)
+		: x(PyFloat_AsDouble(a1)), y(PyFloat_AsDouble(a2)) {}
 
-		point(PyObject* const object) noexcept
-			: x(PyFloat_AsDouble(PyTuple_GetItem(object, 0))),
-			  y(PyFloat_AsDouble(PyTuple_GetItem(object, 1))) {}
+	point(PyObject* const object) noexcept
+		: x(PyFloat_AsDouble(PyTuple_GetItem(object, 0))),
+		  y(PyFloat_AsDouble(PyTuple_GetItem(object, 1))) {}
 
-		point& operator=(PyObject* const object) {
-			if (object) {
-				x = PyFloat_AsDouble(PyTuple_GetItem(object, 0));
-				y = PyFloat_AsDouble(PyTuple_GetItem(object, 1));
-			}
-
-			return *this;
+	point& operator=(PyObject* const object) {
+		if (object) {
+			x = PyFloat_AsDouble(PyTuple_GetItem(object, 0));
+			y = PyFloat_AsDouble(PyTuple_GetItem(object, 1));
 		}
 
-		void assign(PyObject* const a1, PyObject* const a2) {
-			if (a1 && a2) {
-				x = PyFloat_AsDouble(a1);
-				y = PyFloat_AsDouble(a2);
-			}
+		return *this;
+	}
+
+	void assign(PyObject* const a1, PyObject* const a2) {
+		if (a1 && a2) {
+			x = PyFloat_AsDouble(a1);
+			y = PyFloat_AsDouble(a2);
 		}
+	}
 
-		double x{0};
-		double y{0};
-	};
+	double x{0};
+	double y{0};
+};
 
-	template <PyObject* (*get_item)(PyObject*, Py_ssize_t)>
-	class pyobject_iterator_1 {
-	public:
-		explicit pyobject_iterator_1(PyObject* object) noexcept
-			: container_(object)
-		{
-			assert(container_ != nullptr);
-			point_ = get_item(container_, 0);
-		}
 
-		pyobject_iterator_1(PyObject* object, size_t size) noexcept
-			: container_(object), cursor_(size)
-		{
-			assert(container_ != nullptr);
-		}
+class pyobject_iterator_1 {
+public:
+	explicit pyobject_iterator_1(get_item_function getter, PyObject* object) noexcept
+		: container_(object), getter_(getter)
+	{
+		assert(container_ != nullptr);
+		point_ = getter_(container_, 0);
+	}
 
-		bool operator!=(pyobject_iterator_1 const& it) const noexcept {
-			assert(container_ == it.container_);
-			return cursor_ != it.cursor_;
-		}
+	pyobject_iterator_1(get_item_function getter, PyObject* object, size_t size) noexcept
+		: container_(object), cursor_(size)
+	{
+		assert(container_ != nullptr);
+	}
 
-		pyobject_iterator_1& operator++() noexcept {
-			++cursor_;
-			point_ = get_item(container_, cursor_);
-			return *this;
-		}
+	bool operator!=(pyobject_iterator_1 const& it) const noexcept {
+		assert(container_ == it.container_);
+		return cursor_ != it.cursor_;
+	}
 
-		point const* operator->() const { return &point_; }
+	pyobject_iterator_1& operator++() noexcept {
+		++cursor_;
+		point_ = getter_(container_, cursor_);
+		return *this;
+	}
 
-	private:
-		PyObject* const container_;
-		size_t cursor_{0};
-		point point_;
-	};
+	point const* operator->() const { return &point_; }
 
-	// This type of iterator incorporates idea of a ZIP iterator
-	class pyobject_iterator_2 {
-	public:
-		// Ctor for initial position iterator
-		pyobject_iterator_2(
-				PyObject* first_sequence,
-				get_item_function first_getter,
-				PyObject* second_sequence,
-				get_item_function second_getter) noexcept
-			: s1_{first_sequence}, s2_{second_sequence},
-			  get1_{first_getter}, get2_{second_getter},
-			  cursor_{0}
-		{
-			assert(s1_ != nullptr);
-			assert(s2_ != nullptr);
-			assert(g1_ != nullptr);
-			assert(g2_ != nullptr);
+private:
+	PyObject* const container_;
+	size_t cursor_{0};
+	point point_;
+	get_item_function getter_;
+};
 
-			point_.assign(get1_(s1_, 0), get2_(s2_, 0));
-		}
+	// This type of iterator incorporates an idea of a ZIP iterator
+class pyobject_iterator_2 {
+public:
+	// Ctor for initial position iterator
+	pyobject_iterator_2(
+			PyObject* first_sequence,
+			get_item_function first_getter,
+			PyObject* second_sequence,
+			get_item_function second_getter) noexcept
+		: s1_{first_sequence}, s2_{second_sequence},
+		  get1_{first_getter}, get2_{second_getter},
+		  cursor_{0}
+	{
+		assert(s1_ != nullptr);
+		assert(s2_ != nullptr);
+		assert(g1_ != nullptr);
+		assert(g2_ != nullptr);
 
-		// Ctor for end position iterator
-		pyobject_iterator_2(
-				PyObject* first_sequence,
-				PyObject* second_sequence,
-				size_t size) noexcept
-			: s1_{first_sequence}, s2_{second_sequence}, cursor_(size)
-		{
-			assert(s1_ != nullptr);
-			assert(s2_ != nullptr);
-		}
+		point_.assign(get1_(s1_, 0), get2_(s2_, 0));
+	}
 
-		bool operator!=(pyobject_iterator_2 const& it) const noexcept {
-			assert(s1_ == it.s1_);
-			assert(s2_ == it.s2_);
-			return cursor_ != it.cursor_;
-		}
+	// Ctor for end position iterator
+	pyobject_iterator_2(
+			PyObject* first_sequence,
+			PyObject* second_sequence,
+			size_t size) noexcept
+		: s1_{first_sequence}, s2_{second_sequence}, cursor_(size)
+	{
+		assert(s1_ != nullptr);
+		assert(s2_ != nullptr);
+	}
 
-		pyobject_iterator_2& operator++() noexcept {
-			++cursor_;
-			point_.assign(get1_(s1_, cursor_), get2_(s2_, cursor_));
-			return *this;
-		}
+	bool operator!=(pyobject_iterator_2 const& it) const noexcept {
+		assert(s1_ == it.s1_);
+		assert(s2_ == it.s2_);
+		return cursor_ != it.cursor_;
+	}
 
-		point const* operator->() const noexcept { return &point_; }
+	pyobject_iterator_2& operator++() noexcept {
+		++cursor_;
+		point_.assign(get1_(s1_, cursor_), get2_(s2_, cursor_));
+		return *this;
+	}
 
-	private:
-		PyObject* s1_;
-		PyObject* s2_;
+	point const* operator->() const noexcept { return &point_; }
 
-		get_item_function get1_{nullptr};
-		get_item_function get2_{nullptr};
+private:
+	PyObject* s1_;
+	PyObject* s2_;
 
-		size_t cursor_;
-		point point_;
-	};
+	get_item_function get1_{nullptr};
+	get_item_function get2_{nullptr};
 
-	template <typename Tp>
-	mcore::linalg::vec
-	build_l2_approximation(PyObject* container, size_t degree) {
-		if (Py_ssize_t size = (Tp::get_size)(container)) {
-			if (size == 1) {
-				// insufficient number of samples;
-				// let's generate an exception
-				PyErr_SetString(PyExc_ValueError,
-					"Number of samples must be greater then 1");
-				throw wrapper_exception();
-			}
+	size_t cursor_;
+	point point_;
+};
 
-			if (static_cast<size_t>(size) < degree) {
-				// number of samples must be greater then
-				// desired degree of a plynomial approxmation
-				std::ostringstream oss;
-				oss << "Insuffient number of samples (";
-				oss << size;
-				oss << "); degree of a polynom equals to " << degree;
-				PyErr_SetString(PyExc_ValueError, oss.str().c_str());
-				throw wrapper_exception();
-			}
+struct type_property {
+	get_size_function get_size{nullptr};
+	get_item_function get_item{nullptr};
+};
 
-			pyobject_iterator_1<Tp::get_item> begin(container);
-			pyobject_iterator_1<Tp::get_item> end(container, size);
+	type_property list_property;
+	type_property tuple_property;
 
-			return np5::detail::approximate_l2(begin, end, degree);
-		} else {
+mcore::linalg::vec
+build_l2_approximation(type_property const& prop, PyObject* container, size_t degree) {
+	if (Py_ssize_t size = prop.get_size(container)) {
+		if (size == 1) {
+			// insufficient number of samples;
+			// let's generate an exception
 			PyErr_SetString(PyExc_ValueError,
-				"Number of samples must be greater than 1");
+				"Number of samples must be greater then 1");
 			throw wrapper_exception();
 		}
-	}
 
-	struct tuple_traits {
-		static constexpr get_size_function get_size = PyTuple_Size;
-		static constexpr get_item_function get_item = PyTuple_GetItem;
-	};
-
-	struct list_traits {
-		static constexpr get_size_function get_size = PyList_Size;
-		static constexpr get_item_function get_item = PyList_GetItem;
-	};
-
-	PyObject* build_result(mcore::linalg::vec&& v) noexcept {
-		if (PyObject* result = PyTuple_New(v.dim())) {
-			for (size_t i = 0; i < v.dim(); ++i) {
-				if (PyObject* value = PyFloat_FromDouble(v(i))) {
-					PyTuple_SetItem(result, i, value);
-				} else {
-					Py_DECREF(result);
-					return nullptr;
-				}
-			}
-			return result;
-		} else
-			return nullptr;
-	}
-
-	std::tuple<get_item_function, size_t> parse_argument(PyObject* obj) {
-		get_item_function getter = nullptr;
-		size_t size = 0;
-		if (PyTuple_CheckExact(obj)) {
-			size = PyTuple_Size(obj);
-			getter = PyTuple_GetItem;
-		} else if (PyList_CheckExact(obj)) {
-			size = PyList_Size(obj);
-			getter = PyList_GetItem;
-		} else {
-			PyErr_SetString(PyExc_ValueError,
-				"Unsupported type of an argument");
+		if (static_cast<size_t>(size) < degree) {
+			// number of samples must be greater then
+			// desired degree of a plynomial approxmation
+			std::ostringstream oss;
+			oss << "Insuffient number of samples (";
+			oss << size;
+			oss << "); degree of a polynom equals to " << degree;
+			PyErr_SetString(PyExc_ValueError, oss.str().c_str());
 			throw wrapper_exception();
 		}
-		return std::make_tuple(getter, size);
+
+		pyobject_iterator_1 begin(prop.get_item, container);
+		pyobject_iterator_1 end(prop.get_item, container, size);
+
+		return np5::detail::approximate_l2(begin, end, degree);
+	} else {
+		PyErr_SetString(PyExc_ValueError,
+			"Number of samples must be greater than 1");
+			throw wrapper_exception();
 	}
+}
+
+
+PyObject* build_result(mcore::linalg::vec&& v) noexcept {
+	if (PyObject* result = PyTuple_New(v.dim())) {
+		for (size_t i = 0; i < v.dim(); ++i) {
+			if (PyObject* value = PyFloat_FromDouble(v(i))) {
+				PyTuple_SetItem(result, i, value);
+			} else {
+				Py_DECREF(result);
+				return nullptr;
+			}
+		}
+		return result;
+	} else
+		return nullptr;
+}
+
+
+std::tuple<get_item_function, size_t> parse_argument(PyObject* obj) {
+	get_item_function getter = nullptr;
+	size_t size = 0;
+	if (PyTuple_CheckExact(obj)) {
+		size = PyTuple_Size(obj);
+		getter = PyTuple_GetItem;
+	} else if (PyList_CheckExact(obj)) {
+		size = PyList_Size(obj);
+		getter = PyList_GetItem;
+	} else {
+		PyErr_SetString(PyExc_ValueError,
+			"Unsupported type of an argument");
+			throw wrapper_exception();
+	}
+	return std::make_tuple(getter, size);
+}
 
 } // anonymous namespace
 
@@ -229,9 +229,9 @@ approximate_l2_bind(PyObject* self, PyObject* args) {
 		mcore::linalg::vec V;
 		if (PyArg_ParseTuple(args, "Ol", &arg1, &degree)) {
 			if (PyTuple_CheckExact(arg1))
-				V = std::move(build_l2_approximation<tuple_traits>(arg1, degree));
+				V = std::move(build_l2_approximation(tuple_property, arg1, degree));
 			else if (PyList_CheckExact(arg1))
-				V = std::move(build_l2_approximation<list_traits>(arg1, degree));
+				V = std::move(build_l2_approximation(list_property, arg1, degree));
 			else {
 				// Unknown type of arguments
 				PyErr_SetString(PyExc_ValueError,
@@ -394,4 +394,10 @@ static PyMethodDef SpamMethods[] = {
 PyMODINIT_FUNC
 initregression(void) {
 	(void) Py_InitModule("regression", SpamMethods);
+
+	list_property.get_size = PyList_Size;
+	list_property.get_item = PyList_GetItem;
+
+	tuple_property.get_size = PyTuple_Size;
+	tuple_property.get_item = PyTuple_GetItem;
 }

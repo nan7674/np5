@@ -61,7 +61,7 @@ public:
 	typedef typename C::value_type value_type;
 
 	multiplication(value_type coeff, C const& c) noexcept
-		: coeff_{coeff}, container_{c} {}
+		: coeff_(coeff), container_(c) {}
 
 	size_t size() const noexcept {
 		return container_.size();
@@ -132,12 +132,14 @@ struct scalar_multiplication_builder {
 	}
 };
 
+
 template <typename A1, typename A2>
 multiplication<typename scalar_multiplication_builder<A1, A2>::argument_type>
 multiply(A1 const& a1, A2 const& a2) {
 	typedef scalar_multiplication_builder<A1, A2> builder_type;
 	return builder_type::build(a1, a2);
 }
+
 
 template <typename A1, typename A2>
 multiplication<typename scalar_multiplication_builder<A1, A2>::argument_type>
@@ -196,6 +198,7 @@ private:
 	size_t size_;
 };
 
+
 template <typename A1, typename A2>
 class subtraction : public expression<typename A1::value_type, subtraction<A1, A2>> {
 public:
@@ -252,11 +255,13 @@ addition<A1, A2> add(A1 const& a1, A2 const& a2) {
 	return addition<A1, A2>(a1, a2);
 }
 
+
 template <typename A1, typename A2, typename P>
 subtraction<A1, A2> sub(A1 const& a1, A2 const& a2) {
 	P{}.template validate<A1, A2>(a1, a2);
 	return subtraction<A1, A2>(a1, a2);
 }
+
 
 struct equal_size_policy {
 	template <typename A1, typename A2>
@@ -268,6 +273,7 @@ struct equal_size_policy {
 			throw std::runtime_error("Argument have different sizes.");
 	}
 };
+
 
 struct indifferent_size_policy {
 	template <typename A1, typename A2>
