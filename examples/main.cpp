@@ -25,7 +25,8 @@ double measure_time(std::function<void()> f) {
 
 
 int main() {
-	np5::examples::run_ransac();
+//	np5::examples::run_ransac();
+	np5::examples::run_nonparametric();
 
 	return 0;
 }

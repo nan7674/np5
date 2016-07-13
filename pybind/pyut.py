@@ -1,7 +1,12 @@
 import unittest
 import numpy as np
 
-import regression
+try:
+    import regression
+except:
+    from sys import exit
+    print 'Need to compile the library'
+    exit(0)
 
 
 TOL = 1.e-8
@@ -76,11 +81,33 @@ class test_l2_regression(unittest.TestCase):
         p1 = np.array(regression.approximate_l2(xs, ys, 2)[::-1])
         self.assertTrue(equal(sum(np.fabs(p0 - p1)), 0))
 
-    def test_robust(self):
+    def test_robust_1(self):
+        'Tests L1 approximation. A data is presented by a container.'
         p0, data = build_data(1)
         p0 = np.array(p0)
         p1 = np.array(regression.approximate_l1(data, 1)[::-1])
         self.assertTrue(equal(sum(np.fabs(p0 - p1)), 0, 1e-4))
+
+    def test_robust_2(self):
+        'Tests L1 approximation. A data is presented by two containers.'
+        p0, data = build_data(1)
+        data_x = tuple(x for x, y in data)
+        data_y = tuple(y for x, y in data)
+        p0 = np.array(p0)
+        p1 = np.array(regression.approximate_l1(data_x, data_y, 1)[::-1])
+        self.assertTrue(equal(sum(np.fabs(p0 - p1)), 0, 1e-4))
+
+    def test_NW_a1(self):
+        poly, data = build_data(2);
+        p = regression.compute_bandwidth_NW(data)
+        self.assertTrue(isinstance(p, float))
+
+    def test_NW_a2(self):
+        poly, data = build_data(2)
+        data_x = tuple(x for x, y in data)
+        data_y = list(y for x, y in data)
+        p = regression.compute_bandwidth_NW(data_x, data_y)
+        self.assertTrue(isinstance(p, float))
 
 
 if __name__ == '__main__':

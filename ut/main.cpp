@@ -24,11 +24,14 @@ namespace {
 
 using np5::point;
 
-using np5::utils::eq;
-using np5::utils::add_y_noise;
+using np5::utils::approx;
 using np5::utils::add_outliers;
 
-void create_test_data(::mcore::calc::polynom& P, std::vector<point>& vs, size_t degree=3) {
+void create_test_data(
+	::mcore::calc::polynom& P,
+	std::vector<point>& vs,
+	size_t degree=3) 
+{
 	np5::utils::create_random_polynom(degree).swap(P);
 	np5::utils::tabulate(P, 0, 1, 0.05).swap(vs);
 }
@@ -393,9 +396,9 @@ BOOST_AUTO_TEST_CASE(L2_approximation_test) {
 	mcore::calc::polynom p = np5::approximate_l2(std::begin(ps), std::end(ps), 2);
 
 	BOOST_CHECK(p.degree() == 2);
-	BOOST_CHECK(eq(p[0], ep[0]));
-	BOOST_CHECK(eq(p[1], ep[1]));
-	BOOST_CHECK(eq(p[2], ep[2]));
+	BOOST_CHECK(approx(p[0]) == ep[0]);
+	BOOST_CHECK(approx(p[1]) == ep[1]);
+	BOOST_CHECK(approx(p[2]) == ep[2]);
 }
 
 // Test for Nelder-Mead optimization
@@ -406,8 +409,8 @@ BOOST_AUTO_TEST_CASE(Nelder_Mead_optimization) {
 	mcore::linalg::vec out = mcore::calc::optimize_NM(R, initial, config);
 
 	BOOST_CHECK(out.dim() == 2);
-	BOOST_CHECK(eq(R.a, out[0], 1.e-6));
-	BOOST_CHECK(eq(R.a * R.a, out[1], 1.e-6));
+	BOOST_CHECK(approx(R.a, 1.e-6) == out[0]);
+	BOOST_CHECK(approx(R.a * R.a, 1.e-6) == out[1]);
 }
 
 
@@ -436,9 +439,9 @@ BOOST_AUTO_TEST_CASE(RANSAC_test_2) {
 	ps[2].y += 3;
 	auto p = np5::approximate_RANSAC(std::begin(ps), std::end(ps), 2);
 
-	BOOST_CHECK(eq(ep[0], p[0]));
-	BOOST_CHECK(eq(ep[1], p[1]));
-	BOOST_CHECK(eq(ep[2], p[2]));
+	BOOST_CHECK(approx(ep[0]) == p[0]);
+	BOOST_CHECK(approx(ep[1]) == p[1]);
+	BOOST_CHECK(approx(ep[2]) == p[2]);
 }
 
 
@@ -467,9 +470,9 @@ BOOST_AUTO_TEST_CASE(RANSAC_test_3) {
 
 	double const d0 = std::fabs(ep[0] - p[0]);
 	double const d1 = std::fabs(ep[1] - p[1]);
-	LOG << "difference in coefficients : " << "d0=" << d0 << " d1=" << d1 << '\n';
+	LOG << "difference in coefficients : " << "d0=" << d0 << " d1=" << d1 << "; delta = " << error << '\n';
 
-	BOOST_CHECK(error < 1.e-2);
+	BOOST_CHECK(error < 0.1);
 }
 
 # undef LOG

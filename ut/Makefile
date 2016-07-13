@@ -23,3 +23,7 @@ CC_OPTS = -std=c++11 -Ofast -march=native -DNDEBUG
 #CC_OPTS = -std=c++11 -fsanitize=memory -fsanitize-memory-track-origins=2 -g
 ut: $(DEPS) main.cpp $(SRC)
 	$(CC) $(CC_OPTS) $(INC) main.cpp $(SRC) -lboost_unit_test_framework -o ut
+
+clean:
+	rm -f ut ut.log
+
