@@ -1,12 +1,5 @@
-# include <fstream>
 # include <functional>
-# include <vector>
-# include <memory>
 # include <chrono>
-# include <cstdio>
-
-# include "src/polynomial.hpp"
-# include "src/spline.hpp"
 
 # include "examples.hpp"
 
@@ -26,7 +19,8 @@ double measure_time(std::function<void()> f) {
 
 int main() {
 //	np5::examples::run_ransac();
-	np5::examples::run_nonparametric();
+//	np5::examples::run_nonparametric();
+	np5::examples::run_spline();
 
 	return 0;
 }

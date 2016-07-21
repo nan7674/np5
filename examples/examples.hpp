@@ -9,4 +9,6 @@ void run_ransac();
 
 void run_nonparametric();
 
+void run_spline();
+
 }}

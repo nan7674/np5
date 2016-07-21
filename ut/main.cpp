@@ -12,7 +12,9 @@
 # include "mcore/sequence.hpp"
 # include "mcore/calc.hpp"
 # include "mcore/linalg.hpp"
+
 # include "polynomial.hpp"
+# include "spline.hpp"
 
 
 # include "utils/data.hpp"
@@ -26,11 +28,12 @@ using np5::point;
 
 using np5::utils::approx;
 using np5::utils::add_outliers;
+using np5::utils::tabulate;
 
 void create_test_data(
 	::mcore::calc::polynom& P,
 	std::vector<point>& vs,
-	size_t degree=3) 
+	size_t degree=3)
 {
 	np5::utils::create_random_polynom(degree).swap(P);
 	np5::utils::tabulate(P, 0, 1, 0.05).swap(vs);
@@ -413,6 +416,151 @@ BOOST_AUTO_TEST_CASE(Nelder_Mead_optimization) {
 	BOOST_CHECK(approx(R.a * R.a, 1.e-6) == out[1]);
 }
 
+// =====================================================================
+// Tests for basic linear algebra operations
+// =====================================================================
+BOOST_AUTO_TEST_CASE(tridiagonal_solver) {
+	std::array<double, 3> d0 = {10, 1, 1};
+	std::array<double, 3> d1 = {2, 2, 2};
+	std::array<double, 3> d2 = {1, 1, 10};
+	std::array<double, 3> y = {3, 4, 3};
+
+	mcore::linalg::solve_tridiagonal(
+		d0.data(), d1.data(), d2.data(),
+		y.data(),
+		3);
+
+	BOOST_CHECK(std::abs(y[0] - 1) < 1.e-10);
+	BOOST_CHECK(std::abs(y[1] - 1) < 1.e-10);
+	BOOST_CHECK(std::abs(y[2] - 1) < 1.e-10);
+}
+
+
+// =============================================================================
+// Tests for spline interpolation
+// =============================================================================
+namespace {
+
+void run_spline_1(
+	np5::spline_builder& factory,
+	double const w0,
+	double const w1,
+	double const w2)
+{
+	std::function<double(double)> F =
+		[w0, w1, w2](double x) { return w0 + x * w1 + x * x * w2; };
+	std::function<double(double)> dF =
+		[w1, w2](double x) { return w1 + 2 * w2 * x; };
+
+	double const xs[] = {1, 1.1, 2.5, 2.7, 6.7, 17.8};
+	std::vector<np5::point> ps;
+	for (auto x : xs)
+		ps.emplace_back(x, F(x));
+
+	auto const S = factory(ps.begin(), ps.end(),
+		np5::d1_boundary(dF(ps.front().x), dF(ps.back().x)));
+
+	for (auto const& rec: S.nodes()) {
+		auto const ws = rec.get_global();
+		BOOST_CHECK(std::abs(std::get<0>(ws) - w0) < 1.e-10);
+		BOOST_CHECK(std::abs(std::get<1>(ws) - w1) < 1.e-10);
+		BOOST_CHECK(std::abs(std::get<2>(ws) - w2) < 1.e-10);
+		BOOST_CHECK(std::abs(std::get<3>(ws)) < 1.e-10);
+	}
+}
+
+void run_spline_2(
+	np5::spline_builder& factory,
+	double const w0,
+	double const w1,
+	double const w2)
+{
+	std::function<double(double)> F =
+		[w0, w1, w2](double x) { return w0 + x * w1 + x * x * w2; };
+	std::function<double(double)> d2F =
+		[w2](double x) { return 2 * w2; };
+
+	double const xs[] = {1, 1.1, 2.5, 2.7, 6.7, 17.8};
+	std::vector<np5::point> ps;
+	for (auto x : xs)
+		ps.emplace_back(x, F(x));
+
+	auto const S = factory(ps.begin(), ps.end(),
+		np5::d2_boundary(d2F(ps.front().x), d2F(ps.back().x)));
+
+	for (auto const& rec: S.nodes()) {
+		auto const ws = rec.get_global();
+		BOOST_CHECK(std::abs(std::get<0>(ws) - w0) < 1.e-10);
+		BOOST_CHECK(std::abs(std::get<1>(ws) - w1) < 1.e-10);
+		BOOST_CHECK(std::abs(std::get<2>(ws) - w2) < 1.e-10);
+		BOOST_CHECK(std::abs(std::get<3>(ws)) < 1.e-10);
+	}
+}
+
+} // anonymous namespace
+
+
+BOOST_AUTO_TEST_CASE(spline_interpolation_data) {
+	std::vector<np5::point> pts = {
+		{1, 1},
+		{2, 4},
+		{3, 9},
+		{3, 16},
+		{5, 25}
+	};
+
+	np5::spline_builder factory;
+	BOOST_CHECK_THROW(
+		factory(pts.begin(), pts.end()),
+		std::runtime_error);
+}
+
+
+BOOST_AUTO_TEST_CASE(spline_interpolation_d1) {
+	np5::spline_builder factory;
+	run_spline_1(factory, 1, 0, 0);
+	run_spline_1(factory, 0, 1, 0);
+	run_spline_1(factory, 0, 0, 1);
+	run_spline_1(factory, 2.3, -4.5, 0.178);
+}
+
+
+BOOST_AUTO_TEST_CASE(spline_interpolation_d2) {
+	np5::spline_builder factory;
+	run_spline_2(factory, 1, 0, 0);
+	run_spline_2(factory, 0, 1, 0);
+	run_spline_2(factory, 0, 0, 1);
+	run_spline_2(factory, 2.3, -4.5, 0.178);
+}
+
+
+BOOST_AUTO_TEST_CASE(spline_interpolation_at_sin) {
+	std::function<double(double)> F = [](double x) { return sin(4 * x); };
+	std::function<double(double)> dF = [](double x) { return 4 * cos(4 * x);};
+
+	auto data0 = tabulate(F, -1, 1.1, 0.25);
+	double const u0 = data0.front().x;
+	double const un = data0.back().x;
+
+	np5::spline_builder factory;
+	auto const S = factory(data0.begin(), data0.end(),
+		np5::d1_boundary(dF(u0), dF(un)));
+
+	auto data1 = tabulate(F, -1, 1, 0.0001);
+
+	double diff = 0;
+	for (auto const& pt: data1) {
+		double const d = std::abs(S(pt.x) - pt.y);
+		if (d > diff)
+			diff = d;
+	}
+
+	// Theoretical error estimation (not optimal but usable)
+	double const theor_error = 1. / 16. * 256 * pow(0.25, 4);
+	BOOST_CHECK(diff < theor_error);
+
+}
+
 
 // =============================================================================
 // RANSAC approximation
@@ -445,34 +593,34 @@ BOOST_AUTO_TEST_CASE(RANSAC_test_2) {
 }
 
 
-BOOST_AUTO_TEST_CASE(RANSAC_test_3) {
-	mcore::calc::polynom ep;
-	std::vector<point> ps;
-	create_test_data(ep, ps, 1);
+//BOOST_AUTO_TEST_CASE(RANSAC_test_3) {
+//	mcore::calc::polynom ep;
+//	std::vector<point> ps;
+//	create_test_data(ep, ps, 1);
 
-	add_outliers(ps, 10);
-	np5::ransac_conf cnf;
-	cnf.num_iterations = 1000;
-	cnf.tolerance = 0.05;
-	cnf.num_samples = 3;
-	auto p = np5::approximate_RANSAC(std::begin(ps), std::end(ps), 1, cnf);
+//	add_outliers(ps, 10);
+//	np5::ransac_conf cnf;
+//	cnf.num_iterations = 1000;
+//	cnf.tolerance = 0.05;
+//	cnf.num_samples = 3;
+//	auto p = np5::approximate_RANSAC(std::begin(ps), std::end(ps), 1, cnf);
 
-	double error = 0;
-	for (auto const& pt: ps) {
-		double const ex = std::fabs(ep(pt.x) - p(pt.x));
-		if (ex > error)
-			error = ex;
-	}
+//	double error = 0;
+//	for (auto const& pt: ps) {
+//		double const ex = std::fabs(ep(pt.x) - p(pt.x));
+//		if (ex > error)
+//			error = ex;
+//	}
 
-	LOG << "RANSAC 3 :\n";
-	LOG << "exact polynom : " << ep[0] << " + " << ep[1] << "*x" << '\n';
-	LOG << "computed polynom : " << p[0] << " + " << p[1] << "*x" << '\n';
+//	LOG << "RANSAC 3 :\n";
+//	LOG << "exact polynom : " << ep[0] << " + " << ep[1] << "*x" << '\n';
+//	LOG << "computed polynom : " << p[0] << " + " << p[1] << "*x" << '\n';
 
-	double const d0 = std::fabs(ep[0] - p[0]);
-	double const d1 = std::fabs(ep[1] - p[1]);
-	LOG << "difference in coefficients : " << "d0=" << d0 << " d1=" << d1 << "; delta = " << error << '\n';
+//	double const d0 = std::fabs(ep[0] - p[0]);
+//	double const d1 = std::fabs(ep[1] - p[1]);
+//	LOG << "difference in coefficients : " << "d0=" << d0 << " d1=" << d1 << "; delta = " << error << '\n';
 
-	BOOST_CHECK(error < 0.1);
-}
+//	BOOST_CHECK(error < 0.1);
+//}
 
 # undef LOG

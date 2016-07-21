@@ -6,21 +6,24 @@ DEPS = \
     ../src/mcore/calc.hpp \
     ../src/mcore/optimization.hpp \
     ../src/polynomial.hpp \
+    ../src/spline.hpp \
     ../utils/data.hpp
 
 SRC = \
     ../src/mcore/calc.cpp \
     ../src/mcore/linalg.cpp \
     ../src/polynomial.cpp \
+    ../src/spline.cpp \
     ../utils/data.cpp
 
 INC = -I../src/ -I../
 LIB = -L/usr/lib64
-CC = g++
-CC_OPTS = -std=c++11 -Ofast -march=native -DNDEBUG
-#CC = clang++
-#CC_OPTS = -std=c++11 --analyze
-#CC_OPTS = -std=c++11 -fsanitize=memory -fsanitize-memory-track-origins=2 -g
+#CC = g++
+#CC_OPTS = -std=c++11
+# -Ofast -march=native -DNDEBUG
+CC = clang++
+CC_OPTS = -std=c++11 --analyze
+CC_OPTS = -std=c++11 -fsanitize=memory -fsanitize-memory-track-origins=2 -g
 ut: $(DEPS) main.cpp $(SRC)
 	$(CC) $(CC_OPTS) $(INC) main.cpp $(SRC) -lboost_unit_test_framework -o ut
 

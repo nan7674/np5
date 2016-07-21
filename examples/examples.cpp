@@ -6,6 +6,7 @@
 
 # include "src/polynomial.hpp"
 # include "src/kernel.hpp"
+# include "src/spline.hpp"
 # include "utils/data.hpp"
 
 
@@ -81,4 +82,32 @@ void np5::examples::run_nonparametric() {
 		double const av = np5::predict_nw(vs.begin(), vs.end(), x, nw_bw);
 		std::cout << x << ' ' << ev << ' ' << av << ' ' << std::abs(ev - av) << '\n';
 	}
+}
+
+
+void np5::examples::run_spline() {
+	print_header(std::cout, "Run spline interpolation");
+	std::function<double(double)> F = [](double x) { return sin(4 * x); };
+	std::function<double(double)> dF = [](double x) { return 4 * cos(4 * x);};
+
+	auto data0 = tabulate(F, -1, 1.1, 0.25);
+	double const u0 = data0.front().x;
+	double const un = data0.back().x;
+
+	np5::spline_builder factory;
+	auto const S = factory(data0.begin(), data0.end(),
+		np5::d1_boundary(dF(u0), dF(un)));
+
+	auto data1 = tabulate(F, -1, 1, 0.0001);
+
+	double diff = 0;
+	for (auto const& pt: data1) {
+		double const d = std::abs(S(pt.x) - pt.y);
+		if (d > diff)
+			diff = d;
+	}
+
+	// Theoretical error estimation (not optimal but usable)
+	double const theor_error = 1. / 16. * 256 * pow(0.25, 4);
+	std::cout << diff << ' ' << theor_error << std::endl;
 }

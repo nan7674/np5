@@ -377,36 +377,23 @@ namespace mcore { namespace linalg {
 // =============================================================================
 // Low-level matrix operation
 
-	/** @brief Cholesky decomposition of a symmetric 3-diagonal matrix
-	 */
-	void cholesky(
-		double* const d0,
-		double* const d1,
-		double* const d2,
-		size_t const n) noexcept;
-
-	/** @brief Cholesky decomposition of a symmetric matrices
-	 *
-	 * @param d0 a main diagonal of the matrix
-	 */
-	void cholesky(
-		double* const d0,
-		double* const d1,
-		size_t const n) noexcept;
-
-
-	void solve_ldl(
-		double const* const d0,
-		double const* const d1,
-		double const* const d2,
-		double* const y,
-		size_t const n) noexcept;
-
-
-	void solve_ldl(
-		double const* const d0,
-		double const* const d1,
-		double* const y,
-		size_t const n) noexcept;
+/*! \brief Solve Ax = y where A is a tridiagonal matrix
+ *
+ * @param d0 subdiagonal elements of A [1..dim - 1]
+ * @param d1 diagonal of A [0..dim - 1]
+ * @param d2 superdiagonal of A [0..dim - 2]
+ * @param x before call holds an input (rhs), after the call -- an output values
+ *          during the function all the elements of the array are addressed
+ * @param dim dimensionality of the problem
+ *
+ * The function does not check for diagonal dominance, so the result is not
+ * guaranteed to be stable.
+ */
+void solve_tridiagonal(
+	double* d0,
+	double* d1,
+	double* d2,
+	double* x,
+	const size_t dim) noexcept;
 
 }} // namespace linalg // namespace mcore
