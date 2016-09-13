@@ -419,6 +419,22 @@ BOOST_AUTO_TEST_CASE(Nelder_Mead_optimization) {
 // =====================================================================
 // Tests for basic linear algebra operations
 // =====================================================================
+BOOST_AUTO_TEST_CASE(LEQ_solver) {
+	mcore::linalg::mat A(3, 3);
+	A(0, 0) = 1;  A(0, 1) = 4;  A(0, 2) = 9;
+	A(1, 0) = 16; A(1, 1) = 25; A(1, 2) = 36;
+	A(2, 0) = 49; A(2, 1) = 64; A(2, 2) = 81;
+
+	mcore::linalg::vec v(3);
+	v(0) = 1; v(1) = 0.75; v(2) = 0.5;
+
+	auto const r = mcore::linalg::solve(A, v);
+	BOOST_CHECK(std::abs(r[0] - 0.60416667) < 1.e-7);
+	BOOST_CHECK(std::abs(r[1] + 1.16666667) < 1.e-7);
+	BOOST_CHECK(std::abs(r[2] - 0.5625) < 1.e-7);
+}
+
+
 BOOST_AUTO_TEST_CASE(tridiagonal_solver) {
 	std::array<double, 3> d0 = {10, 1, 1};
 	std::array<double, 3> d1 = {2, 2, 2};

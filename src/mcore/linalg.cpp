@@ -7,6 +7,26 @@
 
 # include "calc.hpp"
 
+# ifdef WITH_LAPACK
+
+extern "C" {
+
+	// Solves a system on leq Ax = b
+	void dgesv_(
+		int*,     // A number of linear equations; an order of matrix A
+		int*,     // A number of rhs
+		double* , // A matrix A itself
+		int*,     // The leading dimension of the array A
+		int*,     // An array with pivoting indices
+		double* , // right-hand of the system
+		int*,     // Leading dimension of the matrix b
+		int*      // Output informaion
+	);
+
+}
+
+# endif
+
 namespace {
 
 	using ::mcore::calc::sqr;
@@ -137,7 +157,7 @@ mcore::linalg::leq_solver::leq_solver(size_t dim)
 {
 	A_.data_ = reinterpret_cast<double*>(data_.get());
 	rhs_.data_ = A_.data_ + dim_ * dim_;
-	permutation_.data_ = reinterpret_cast<size_t*>(rhs_.data_ + dim_);
+	permutation_.data_ = reinterpret_cast<decltype(permutation_.data_)>(rhs_.data_ + dim_);
 }
 
 inline void mcore::linalg::leq_solver::init_permutation() noexcept {
@@ -183,14 +203,32 @@ mcore::linalg::leq_solver::triangulate(mat const& A, vec const& rhs) noexcept {
 	}
 }
 
-
 mcore::linalg::vec
 mcore::linalg::leq_solver::solve(mat const& A, vec const& rhs) {
+# ifdef WITH_LAPACK
+	rhs_.copy_from(rhs.data().data());
+	A_.copy_from(A.data().data());
+
+	int n = A.cols();
+	int nrhs = 1;
+	int lda = n;
+	int ldb = n;
+	int info;
+
+	dgesv_(&n, &nrhs, A_.data_, &lda, permutation_.data_, rhs_.data_, &ldb, &info);
+
+	mcore::linalg::vec ret(rhs.size());
+	for (size_t i = 0; i < rhs.size(); ++i)
+		ret[i] = rhs_(i);
+
+	return ret;
+# else
 	triangulate(A, rhs);
 	mcore::linalg::vec ret(dim_);
 	for (size_t i = 0; i < dim_; ++i)
 		ret[i] = rhs_(permutation_[i]);
 	return ret;
+# endif
 }
 
 void mcore::linalg::leq_solver::solve(mat const& A, vec const& rhs, vec& sol) {

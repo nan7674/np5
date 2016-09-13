@@ -6,8 +6,14 @@
 # include <cstddef>
 # include <initializer_list>
 
+# include "config.hpp"
 # include "sequence.hpp"
 
+# ifdef WITH_LAPACK
+# define GET_ELEMENT(data, nrows, ncols, row, column) data[(column) * (nrows) + (row)]
+# else
+# define GET_ELEMENT(data, nrows, ncols, row, column) data[(row) * (ncols) + (column)]
+# endif
 
 namespace mcore { namespace linalg {
 
@@ -194,53 +200,53 @@ namespace mcore { namespace linalg {
 		container_type data_;
 	};
 
-	/** @brief Matrix implementation
+/** @brief Matrix implementation
+ */
+class mat {
+public:
+	typedef double value_type;
+
+private:
+	typedef ::mcore::detail::sequence<value_type> container_type;
+
+public:
+	/** @brief Creates matrix of required sizes
+	 *
+	 * @param rows number of rows in the matrix
+	 * @aram cols number of columns in the matrix
+	 *
 	 */
-	class mat {
-	public:
-		typedef double value_type;
+	mat(size_t rows, size_t cols)
+		: data_(rows * cols), rows_(rows), cols_(cols) {}
 
-	private:
-		typedef ::mcore::detail::sequence<value_type> container_type;
+	double operator()(size_t r, size_t c) const noexcept {
+		assert(r < rows_);
+		assert(c < cols_);
+		return GET_ELEMENT(data_, rows_, cols_, r, c);
+	}
 
-	public:
-		/** @brief Creates matrix of required sizes
-		 *
-		 * @param rows number of rows in the matrix
-		 * @aram cols number of columns in the matrix
-		 *
-		 */
-		mat(size_t rows, size_t cols)
-			: data_(rows * cols), rows_(rows), cols_(cols) {}
+	double& operator()(size_t r, size_t c) noexcept {
+		assert(r < rows_);
+		assert(c < cols_);
+		return GET_ELEMENT(data_, rows_, cols_, r, c);
+	}
 
-		double operator()(size_t r, size_t c) const noexcept {
-			assert(r < rows_);
-			assert(c < cols_);
-			return data_[r * cols_ + c];
-		}
+	mat copy() const;
 
-		double& operator()(size_t r, size_t c) noexcept {
-			assert(r < rows_);
-			assert(c < cols_);
-			return data_[r * cols_ + c];
-		}
+	size_t rows() const noexcept { return rows_; }
+	size_t cols() const noexcept { return cols_; }
 
-		mat copy() const;
+	container_type const& data() const noexcept { return data_; }
 
-		size_t rows() const noexcept { return rows_; }
-		size_t cols() const noexcept { return cols_; }
+private:
+	mat(size_t rows, size_t cols, container_type&& data) noexcept
+		: data_(std::move(data)), rows_(rows), cols_(cols) {}
 
-		container_type const& data() const noexcept { return data_; }
-
-	private:
-		mat(size_t rows, size_t cols, container_type&& data) noexcept
-			: data_(std::move(data)), rows_(rows), cols_(cols) {}
-
-	private:
-		container_type data_;
-		size_t rows_{0};
-		size_t cols_{0};
-	};
+private:
+	container_type data_;
+	size_t rows_{0};
+	size_t cols_{0};
+};
 
 
 	/** @brief Compres two vectors
@@ -262,117 +268,124 @@ namespace mcore { namespace linalg {
 	 */
 	bool eq(mat const& x, mat const& y, double tol=1.e-12) noexcept;
 
-	namespace detail {
 
-		class mat_view {
-		public:
-			typedef double element_type;
-			friend class mcore::linalg::leq_solver;
+namespace detail {
 
-		public:
-			explicit mat_view(size_t nrows) noexcept
-				: nrows_(nrows) {}
+class mat_view {
+public:
+	typedef double element_type;
+	friend class mcore::linalg::leq_solver;
 
-			element_type& operator()(size_t r, size_t c) noexcept {
-				assert(r < nrows_);
-				assert(c < nrows_);
-				assert(data_);
+public:
+	explicit mat_view(size_t nrows) noexcept
+		: nrows_(nrows) {}
 
-				return data_[c + r * nrows_];
-			}
+	element_type& operator()(size_t r, size_t c) noexcept {
+		assert(r < nrows_);
+		assert(c < nrows_);
+		assert(data_);
 
-			element_type const& operator()(size_t r, size_t c) const noexcept {
-				return const_cast<element_type const&>(
-					const_cast<mat_view*>(this)->operator()(r, c));
-			}
-
-		private:
-			void copy_from(double const* ptr) noexcept {
-				assert(data_);
-				std::memcpy(data_, ptr, sizeof(double) * nrows_ * nrows_);
-			}
-
-		private:
-			size_t nrows_;
-			element_type* data_{nullptr};
-		};
-
-		template <typename T>
-		class vec_view {
-		public:
-			typedef T element_type;
-			friend class mcore::linalg::leq_solver;
-
-		public:
-			explicit vec_view(size_t dim) noexcept
-				: dimension_(dim) {}
-
-			element_type& operator()(size_t index) noexcept {
-				assert(index < dimension_);
-				return data_[index];
-			}
-
-			element_type const& operator()(size_t index) const noexcept {
-				return const_cast<element_type const&>(
-					const_cast<vec_view*>(this)->operator()(index));
-			}
-
-			element_type& operator[](size_t index) noexcept {
-				assert(index < dimension_);
-				return data_[index];
-			}
-
-			element_type const& operator[](size_t index) const noexcept {
-				return const_cast<element_type const&>(
-					const_cast<vec_view*>(this)->operator[](index));
-			}
-
-		private:
-			void copy_from(double const* ptr) noexcept {
-				assert(data_);
-				std::memcpy(data_, ptr, sizeof(double) * dimension_);
-			}
-
-		private:
-			size_t dimension_;
-			element_type* data_{nullptr};
-		};
-
-	} // namespace detail
-
-	/** @brief The class solve system of linear equations
-	 */
-	class leq_solver {
-		typedef double element_type;
-
-		leq_solver(leq_solver&) = delete;
-		leq_solver& operator=(leq_solver&) = delete;
-
-		static size_t get_memory_size(size_t degree) noexcept;
-
-	public:
-		explicit leq_solver(size_t degree);
-
-		vec solve(mat const& x, vec const& y);
-		void solve(mat const& x, vec const& y, vec& rhs);
-
-	private:
-		void init_permutation() noexcept;
-		void triangulate(mat const& x, vec const& y) noexcept;
-
-	private:
-		size_t dim_;
-		detail::mat_view A_;
-		detail::vec_view<double> rhs_;
-		detail::vec_view<size_t> permutation_;
-		std::unique_ptr<uint8_t[]> data_;
-	};
-
-	/** @brief Solves a system of linear equations
-	 */
-	inline vec solve(mat const& x, vec const& y) {
-		return leq_solver(y.dim()).solve(x, y);
+		return GET_ELEMENT(data_, nrows_, nrows_, r, c);
 	}
+
+	element_type const& operator()(size_t r, size_t c) const noexcept {
+		return const_cast<element_type const&>(
+		const_cast<mat_view*>(this)->operator()(r, c));
+	}
+
+private:
+	void copy_from(double const* ptr) noexcept {
+		assert(data_);
+		std::memcpy(data_, ptr, sizeof(double) * nrows_ * nrows_);
+	}
+
+private:
+	size_t nrows_;
+	element_type* data_{nullptr};
+};
+
+
+template <typename T>
+class vec_view {
+public:
+	typedef T element_type;
+	friend class mcore::linalg::leq_solver;
+
+public:
+	explicit vec_view(size_t dim) noexcept
+		: dimension_(dim) {}
+
+	element_type& operator()(size_t index) noexcept {
+		assert(index < dimension_);
+		return data_[index];
+	}
+
+	element_type const& operator()(size_t index) const noexcept {
+		return const_cast<element_type const&>(
+		const_cast<vec_view*>(this)->operator()(index));
+	}
+
+	element_type& operator[](size_t index) noexcept {
+		assert(index < dimension_);
+		return data_[index];
+	}
+
+	element_type const& operator[](size_t index) const noexcept {
+		return const_cast<element_type const&>(
+		const_cast<vec_view*>(this)->operator[](index));
+	}
+
+private:
+	void copy_from(double const* ptr) noexcept {
+		assert(data_);
+		std::memcpy(data_, ptr, sizeof(double) * dimension_);
+	}
+
+private:
+	size_t dimension_;
+	element_type* data_{nullptr};
+};
+
+} // namespace detail
+
+
+/** @brief The class solve system of linear equations
+ */
+class leq_solver {
+	typedef double element_type;
+
+	leq_solver(leq_solver&) = delete;
+	leq_solver& operator=(leq_solver&) = delete;
+
+	static size_t get_memory_size(size_t degree) noexcept;
+
+public:
+	explicit leq_solver(size_t degree);
+
+	vec solve(mat const& x, vec const& y);
+	void solve(mat const& x, vec const& y, vec& rhs);
+
+private:
+	void init_permutation() noexcept;
+	void triangulate(mat const& x, vec const& y) noexcept;
+
+private:
+	size_t dim_;
+	detail::mat_view A_;
+	detail::vec_view<double> rhs_;
+# ifdef WITH_LAPACK
+	detail::vec_view<int> permutation_;
+# else
+	detail::vec_view<size_t> permutation_;
+# endif
+	std::unique_ptr<uint8_t[]> data_;
+};
+
+/** @brief Solves a system of linear equations
+ */
+inline vec solve(mat const& x, vec const& y) {
+	return leq_solver(y.dim()).solve(x, y);
+}
 
 // =============================================================================
 // Low-level matrix operation
@@ -397,3 +410,5 @@ void solve_tridiagonal(
 	const size_t dim) noexcept;
 
 }} // namespace linalg // namespace mcore
+
+# undef GET_ELEMENT
