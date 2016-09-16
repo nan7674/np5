@@ -1,6 +1,8 @@
 # pragma once
 
 # include <limits>
+# include <functional>
+
 # include "mcore/calc.hpp"
 # include "common.hpp"
 
@@ -77,5 +79,13 @@ private:
 	double tolerance_;
 };
 
-}} // utils //np5
 
+/*! @brief Measures time execution of a function
+ *
+ * @param[in] f function to executed
+ * @return elapsed time in seconds
+ */
+double measure_time(std::function<void()> f);
+
+
+}} // utils //np5

@@ -27,8 +27,10 @@ namespace {
 using np5::point;
 
 using np5::utils::approx;
+using np5::utils::set_default_tolerance;
 using np5::utils::add_outliers;
 using np5::utils::tabulate;
+
 
 void create_test_data(
 	::mcore::calc::polynom& P,
@@ -373,7 +375,9 @@ BOOST_AUTO_TEST_CASE(vec_div_assign_1) {
 	BOOST_CHECK(v(2) == 6. / 2.);
 }
 
-// Matrix testst
+// =====================================================================
+// Tests for matrix operations
+// =====================================================================
 BOOST_AUTO_TEST_CASE(mat_test_1) {
 	mcore::linalg::mat A(2, 2);
 	A(0, 0) = 1;
@@ -390,6 +394,47 @@ BOOST_AUTO_TEST_CASE(mat_test_1) {
 	BOOST_CHECK(A(1, 1) == 1);
 }
 
+BOOST_AUTO_TEST_CASE(matrix_mutliplication) {
+	mcore::linalg::mat A(2, 3);
+	A <<
+		1, 2, 3,
+		4, 5, 6;
+
+	mcore::linalg::mat B(3, 1);
+	B << 7, 8, 8;
+
+	mcore::linalg::mat C = A * B;
+	BOOST_CHECK(C.rows() == 2);
+	BOOST_CHECK(C.cols() == 1);
+
+	set_default_tolerance(1.e-10);
+	BOOST_CHECK(approx(C(0, 0)) == (7 + 2 * 8 + 3 * 8));
+	BOOST_CHECK(approx(C(1, 0)) == (4 * 7 + 5 * 8 + 6 * 8));
+}
+
+BOOST_AUTO_TEST_CASE(matrix_transposition) {
+	mcore::linalg::mat A(2, 3);
+	A <<
+		1, 2, 3,
+		4, 5, 6;
+
+	BOOST_CHECK(A.rows() == 2);
+	BOOST_CHECK(A.cols() == 3);
+
+	auto const At = A.T();
+
+	BOOST_CHECK(At.rows() == 3);
+	BOOST_CHECK(At.cols() == 2);
+
+	BOOST_CHECK(approx(At(0, 0)) == 1);
+	BOOST_CHECK(approx(At(0, 1)) == 4);
+	BOOST_CHECK(approx(At(1, 0)) == 2);
+	BOOST_CHECK(approx(At(1, 1)) == 5);
+	BOOST_CHECK(approx(At(2, 0)) == 3);
+	BOOST_CHECK(approx(At(2, 1)) == 6);
+}
+
+
 // Test for L2 approximation
 BOOST_AUTO_TEST_CASE(L2_approximation_test) {
 	mcore::calc::polynom ep;
@@ -398,6 +443,7 @@ BOOST_AUTO_TEST_CASE(L2_approximation_test) {
 	create_test_data(ep, ps, 2);
 	mcore::calc::polynom p = np5::approximate_l2(std::begin(ps), std::end(ps), 2);
 
+	set_default_tolerance(1.e-10);
 	BOOST_CHECK(p.degree() == 2);
 	BOOST_CHECK(approx(p[0]) == ep[0]);
 	BOOST_CHECK(approx(p[1]) == ep[1]);
@@ -417,7 +463,7 @@ BOOST_AUTO_TEST_CASE(Nelder_Mead_optimization) {
 }
 
 // =====================================================================
-// Tests for basic linear algebra operations
+// Tests for LEQ solvers
 // =====================================================================
 BOOST_AUTO_TEST_CASE(LEQ_solver) {
 	mcore::linalg::mat A(3, 3);

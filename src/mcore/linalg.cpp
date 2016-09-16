@@ -11,17 +11,35 @@
 
 extern "C" {
 
-	// Solves a system on leq Ax = b
-	void dgesv_(
-		int*,     // A number of linear equations; an order of matrix A
-		int*,     // A number of rhs
-		double* , // A matrix A itself
-		int*,     // The leading dimension of the array A
-		int*,     // An array with pivoting indices
-		double* , // right-hand of the system
-		int*,     // Leading dimension of the matrix b
-		int*      // Output informaion
-	);
+// Solves a system on leq Ax = b
+void dgesv_(
+	int*,     // A number of linear equations; an order of matrix A
+	int*,     // A number of rhs
+	double* , // A matrix A itself
+	int*,     // The leading dimension of the array A
+	int*,     // An array with pivoting indices
+	double* , // right-hand of the system
+	int*,     // Leading dimension of the matrix b
+	int*      // Output informaion
+);
+
+// Computes SVD of a matrix
+void dgesvd_(
+	char*,   // JOBU:   U matrix computation
+	char*,   // JOBVT:  VT matrix computation parameters
+	int,     // M:      The number of rows in a matrix A
+	int,     // N:      The number of columns in the matrix A
+	double*, // A:      The matrix A itself
+	int*,    // LDA:    The leading dimension of the matrix A
+	double*, // S:      The array with singular values of the matrix A
+	double*, // U:
+	int*,    // LDU:    The leading dimension of the U matrix
+	double*, // VT:
+	int*,    // LDVT:
+	double*, // WORK:
+	int*,    // LWORK:
+	int*     // INFO
+);
 
 }
 
@@ -84,6 +102,23 @@ bool mcore::linalg::eq(mat const& x, mat const& y, double tol) noexcept {
 }
 
 
+mcore::linalg::mat_fill::mat_fill(mat& matrix, double value)
+	: matrix_(matrix)
+{
+	size_t const nitems = matrix_.rows() * matrix_.cols();
+	values_.reserve(nitems);
+	values_.push_back(value);
+}
+
+
+mcore::linalg::mat_fill::~mat_fill() {
+	size_t index = 0;
+	for (auto const v: values_) {
+		size_t const row = index / matrix_.cols();
+		size_t const col = (index++) % matrix_.cols();
+		matrix_(row, col) = v;
+	}
+}
 
 /*
 // Solve Ax = b

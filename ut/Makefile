@@ -18,7 +18,7 @@ SRC = \
 
 INC = -I../src/ -I../
 LIB = -L/usr/lib64
-CC_GCC = g++
+CC_GCC = g++ -g
 CC_GCC_OPTS = -std=c++11
 
 # -Ofast -march=native -DNDEBUG

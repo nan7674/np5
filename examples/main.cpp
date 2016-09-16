@@ -1,26 +1,17 @@
-# include <functional>
-# include <chrono>
+
+# include <iostream>
 
 # include "examples.hpp"
-
-
-/*! @brief Given the function runs it and measure time of execution
-*
-* @param[in] f function to run
-* @return elapsed time in seconds
-*/
-double measure_time(std::function<void()> f) {
-	auto start = std::chrono::system_clock::now();
-	f();
-	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start);
-	return duration.count() / 1000.;
-}
+# include "utils/data.hpp"
 
 
 int main() {
 //	np5::examples::run_ransac();
 //	np5::examples::run_nonparametric();
-	np5::examples::run_spline();
+
+
+	double const et = np5::utils::measure_time(np5::examples::run_spline);
+	std::cout << "Elapsed time:" << et << std::endl;
 
 	return 0;
 }

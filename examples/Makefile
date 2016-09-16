@@ -15,12 +15,12 @@ HDR = \
     ../src/mcore/linalg.hpp \
     ../utils/data.hpp
 
-CCOPT = -g 
+CCOPT = -O2 -march=native -flto -fno-rtti
 #-Ofast -march=native
 
 examples: examples.hpp examples.cpp main.cpp ${HDR} ${SRC}
 	g++ -std=c++11 ${CCOPT} -I../src -I../ examples.cpp main.cpp \
-	    ${SRC} -o examples
+	    ${SRC} -llapack -o examples
 
 clean:
 	rm -f examples
